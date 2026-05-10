@@ -1,0 +1,334 @@
+Table users {
+    id              int [primary key, increment]
+    fullname        varchar(100)
+    email           varchar(150) [unique]
+    phone_number    varchar(20) [unique]
+    password        varchar(255)
+    role            enum('buyer', 'seller', 'admin')
+    account_status  enum('ACTIVE', 'LOCKED') [default: 'ACTIVE']
+    created_at      datetime [default: `now()`]
+    updated_at      datetime [default: `now()`]
+}
+
+Table refresh_tokens {
+    id              int [primary key, increment]
+    token           varchar(255)
+    user_id         int
+    expires_at      datetime
+    is_revoked      boolean [default: false]
+    device_info     varchar(255)
+    created_at      datetime [default: `now()`]
+    updated_at      datetime [default: `now()`]
+}
+
+
+Table user_addresses {
+    id        int [primary key, increment]
+    user_id   int 
+    address   varchar(200)
+    city      varchar(50)
+    state     varchar(50)
+    country   varchar(50)
+    zipcode   varchar(20)
+    is_default boolean
+}
+
+Table user_payments {
+    id              int [primary key, increment]
+    user_id         int
+    method          enum('COD', 'Credit Card', 'PayPal') 
+    provider        varchar(50) // Visa, Mastercard, MoMo...
+    account_number  varchar(100) [unique]
+    expiry_date     date
+    coupon_id       int 
+}
+
+Table categories {
+    id   int [primary key, increment]
+    name varchar(100) [unique]
+}
+
+Table products {
+    id           int [primary key, increment]
+    category_id  int
+    seller_id    int // ID của seller sở hữu sản phẩm
+    title        varchar(250)
+    price        int
+    import_price int [default: 0] // Giá vốn/nhập
+    profit_margin int
+    quantity     varchar 
+    thumbnail    varchar(500) // Ảnh đại diện
+    images       text // Lưu danh sách ảnh dưới dạng JSON hoặc dấu phân cách
+    description  text
+    created_at   datetime [default: `now()`]
+    updated_at   datetime [default: `now()`]
+    deleted      boolean [default: false]
+    total_stock int [default: 0]
+    sold        int [default: 0]
+    available   int [default: 0]
+}
+
+Table product_variants {
+    id         int [primary key, increment]
+    product_id int
+    size       varchar(50)
+    color      varchar(50)
+    stock      int [default: 0] // số lượng tồn kho
+}
+
+Table tryon_models {
+    id         int [primary key, increment]
+    product_id int
+    model_url  varchar(500) // Link đến mô hình 3D
+    type       enum('clothing', 'shoes', 'glasses', 'hats', 'jewelry') 
+}
+
+Table inventory {
+    id          int [primary key, increment]
+    product_id  int
+    total_stock int [default: 0]
+    sold        int [default: 0]
+    available   int [default: 0]
+    import_price int
+}
+
+Table cart {
+    id         int [primary key, increment]
+    user_id    int
+    product_id int
+    variant_id int // Biến thể sản phẩm (size, màu sắc)
+    quantity   int [default: 1]
+    added_at   datetime [default: `now()`]
+}
+
+Table orders {
+    id              int [primary key, increment]
+    user_id         int
+    fullname        varchar(100)
+    email           varchar(150)
+    phone           varchar(20)
+    address         varchar(250)
+    total_price     int
+    payment_method  enum('COD', 'Online') 
+    status          enum('Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned') 
+    created_at      datetime [default: `now()`]
+    updated_at      datetime
+}
+
+
+
+Table order_items {
+    id          int [primary key, increment]
+    order_id    int
+    product_id  int
+    variant_id  int
+    price       int
+    quantity    int
+    total_price int
+    // Snapshot fields - Lưu thông tin tại thời điểm đặt hàng
+    seller_id            int // Snapshot: ID của seller tại thời điểm đặt hàng
+    selling_price        int [default: 0] // Snapshot: Giá bán ra
+    import_price         int [default: 0] // Snapshot: Giá vốn/nhập
+    platform_fee         int [default: 0] // Snapshot: Phí sàn (số tiền cố định)
+    platform_fee_percent decimal(5,2) [default: 0] // Snapshot: Phí sàn (%)
+    product_title        varchar(250) // Snapshot: Tên sản phẩm
+    product_thumbnail    varchar(500) // Snapshot: Ảnh sản phẩm
+    variant_name         varchar(250) // Snapshot: Tên biến thể
+}
+
+
+Table payments {
+    id          int [primary key, increment]
+    order_id    int
+    user_id     int
+    amount      int
+    method      enum('COD', 'Online')
+    status      enum('Success', 'Failed', 'Pending')
+    created_at  datetime [default: `now()`]
+    coupons_id int
+}
+
+Table refunds {
+    id          int [primary key, increment]
+    payment_id  int
+    user_id     int
+    order_id    int
+    amount      int
+    reason      varchar(255)
+    status      enum('Pending', 'Approved', 'Rejected')
+    created_at  datetime [default: `now()`]
+}
+
+Table withdrawals {
+    id          int [primary key, increment]
+    seller_id   int
+    amount      int
+    account_number varchar(100)
+    bank_name   varchar(100)
+    status      enum('Pending', 'Approved', 'Rejected')
+    created_at  datetime [default: `now()`]
+}
+
+Table revenue_settlement {
+    id          int [primary key, increment]
+    seller_id   int
+    order_id    int
+    total_revenue int
+    platform_fee int
+    final_amount int
+    created_at  datetime [default: `now()`]
+}
+
+Table reviews {
+    id          int [primary key, increment]
+    user_id     int
+    product_id  int
+    rating      int  // 1-5 sao
+    comment     text
+    is_reported boolean [default: false] // Đánh giá này có bị báo cáo không?
+    report_reason varchar(255)  // Lý do báo cáo (nếu có)
+    report_status enum('Pending', 'Reviewed', 'Rejected') // Trạng thái xử lý báo cáo
+    created_at  datetime [default: `now()`]
+}
+
+
+Table messages {
+    id               int [primary key, increment]
+    conversation_id  int
+    sender_id        int
+    content          text
+    is_read          boolean [default: false]
+    created_at       datetime [default: `now()`]
+}
+
+
+Table shipping_providers {
+    id          int [primary key, increment]
+    name        varchar(100) [unique]  // Tên đơn vị vận chuyển
+    contact     varchar(100)  // Số liên lạc
+    created_at  datetime [default: `now()`]
+}
+
+Table shipments {
+    id               int [primary key, increment]
+    order_id         int
+    provider_id      int  // Đơn vị vận chuyển
+    shipping_method  enum('Standard', 'Express', 'Same Day')  // Phương thức vận chuyển
+    tracking_number  varchar(50) [unique]
+    status          enum('Pending', 'Picked Up', 'In Transit', 'Delivered', 'Failed')
+    last_location   varchar(255)  // Theo dõi vị trí cuối cùng
+    estimated_date  date  // Ngày dự kiến giao hàng
+    delivered_at datetime [default: NULL]
+    created_at      datetime [default: `now()`]
+}
+
+
+Table failed_shipments {
+    id              int [primary key, increment]
+    shipment_id     int
+    reason          varchar(255)  // Lý do giao thất bại
+    resolution      enum('Rescheduled', 'Returned', 'Refunded')
+    processed_at    datetime [default: `now()`]
+}
+
+Table discounts {
+    id              int [primary key, increment]
+    product_id      int
+    discount_type   enum('Percentage', 'Fixed')  // Loại giảm giá (% hoặc số tiền cố định)
+    discount_value  decimal(10,2)  // Giá trị giảm giá
+    start_date      datetime
+    end_date        datetime
+    created_at      datetime [default: `now()`]
+}
+
+Table coupons {
+    id              int [primary key, increment]
+    code            varchar(50) [unique]  // Mã giảm giá
+    discount_type   enum('Percentage', 'Fixed')  
+    discount_value  decimal(10,2)  
+    min_order_value decimal(10,2)  // Giá trị đơn hàng tối thiểu để áp dụng
+    max_uses        int  // Số lần sử dụng tối đa
+    used_count      int [default: 0]  // Số lần đã sử dụng
+    start_date      datetime
+    end_date        datetime
+    created_at      datetime [default: `now()`]
+}
+
+Table platform_config {
+    id              int [primary key, increment]
+    config_key      varchar(100) [unique]
+    config_value    text
+    description     varchar(500)
+    created_at      datetime [default: `now()`]
+    updated_at      datetime [default: `now()`]
+}
+
+Table conversations {
+    id              int [primary key, increment]
+    user1_id        int
+    user2_id        int
+    last_message    text
+    last_message_at datetime
+    created_at      datetime [default: `now()`]
+
+    Indexes {
+        (user1_id, user2_id) [unique]
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Ref: "users"."id" < "user_addresses"."user_id"
+Ref: "users"."id" < "user_payments"."user_id"
+Ref: "users"."id" < "orders"."user_id"
+Ref: "users"."id" < "cart"."user_id"
+Ref: "users"."id" < "refunds"."user_id"
+Ref: "users"."id" < "payments"."user_id"
+Ref: "users"."id" < "reviews"."user_id"
+Ref: "users"."id" < "withdrawals"."seller_id"
+Ref: "users"."id" < "refresh_tokens"."user_id"
+Ref: "users"."id" < "products"."seller_id"
+Ref: "users"."id" < "order_items"."seller_id"
+
+Ref: "orders"."id" < "refunds"."order_id"
+Ref: "orders"."id" < "payments"."order_id"
+Ref: "orders"."id" < "shipments"."order_id"
+Ref: "orders"."id" < "order_items"."order_id"
+Ref: "orders"."id" < "revenue_settlement"."order_id"
+
+Ref: "categories"."id" < "products"."category_id"
+
+Ref: "products"."id" < "reviews"."product_id"
+Ref: "products"."id" < "tryon_models"."product_id"
+Ref: "products"."id" < "product_variants"."product_id"
+Ref: "products"."id" < "inventory"."product_id"
+Ref: "products"."id" > "discounts"."product_id"
+Ref: "products"."id" < "order_items"."product_id"
+Ref: "products"."id" < "cart"."product_id"
+
+
+Ref: "product_variants"."id" < "cart"."variant_id"
+Ref: "product_variants"."id" < "order_items"."variant_id"
+
+Ref: "shipments"."id" < "failed_shipments"."shipment_id"
+Ref: "shipping_providers"."id" < "shipments"."provider_id"
+
+Ref: "users"."id" < "conversations"."user1_id"
+Ref: "users"."id" < "conversations"."user2_id"
+
+Ref: "conversations"."id" < "messages"."conversation_id"
+Ref: "users"."id" < "messages"."sender_id"
+
+Ref: "coupons"."id" < "payments"."coupons_id"
