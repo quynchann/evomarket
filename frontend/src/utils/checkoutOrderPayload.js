@@ -1,6 +1,6 @@
 /**
- * Body POST /orders — khớp với backend/src/services/order.service.js#createOrder
- * (product_id, variant_id, quantity, fullname, email, phone, address, payment_method)
+ * Body POST /orders — khớp backend createOrder
+ * (items, fullname, email, phone, address, payment_method, shipping_method?, coupon_code?, shop_coupons?, buyer_note?)
  */
 
 export const PAYMENT_UI_TO_API = {
@@ -16,6 +16,10 @@ export const PAYMENT_UI_TO_API = {
  * @param {string} params.phone
  * @param {string} params.address
  * @param {'cod'|'online'} params.paymentUi
+ * @param {'standard'|'express'} [params.shippingMethod] — khớp backend (standard 0đ, express 15k)
+ * @param {string} [params.couponCode] — mã sàn
+ * @param {Record<string, string>} [params.shopCoupons] — seller id (string) -> mã shop
+ * @param {string} [params.buyerNote] — ghi chú người mua
  */
 export function buildCreateOrderRequestBody({
   cartItems,
@@ -24,11 +28,18 @@ export function buildCreateOrderRequestBody({
   phone,
   address,
   paymentUi,
+  shippingMethod = "standard",
+  couponCode,
+  shopCoupons,
+  buyerNote,
 }) {
   const payment_method =
     PAYMENT_UI_TO_API[paymentUi] ?? PAYMENT_UI_TO_API.cod;
 
-  return {
+  const ship =
+    shippingMethod === "express" ? "express" : "standard";
+
+  const body = {
     items: cartItems.map((item) => ({
       product_id: item.productId,
       variant_id: item.variantId ?? null,
@@ -39,5 +50,29 @@ export function buildCreateOrderRequestBody({
     phone: phone?.trim?.() ?? "",
     address: address?.trim?.() ?? "",
     payment_method,
+    shipping_method: ship,
   };
+
+  const code = couponCode != null ? String(couponCode).trim() : "";
+  if (code) {
+    body.coupon_code = code;
+  }
+
+  if (shopCoupons && typeof shopCoupons === "object") {
+    const entries = Object.entries(shopCoupons).filter(
+      ([, v]) => v != null && String(v).trim() !== "",
+    );
+    if (entries.length > 0) {
+      body.shop_coupons = Object.fromEntries(
+        entries.map(([k, v]) => [String(k), String(v).trim()]),
+      );
+    }
+  }
+
+  const note = buyerNote != null ? String(buyerNote).trim().slice(0, 500) : "";
+  if (note) {
+    body.buyer_note = note;
+  }
+
+  return body;
 }

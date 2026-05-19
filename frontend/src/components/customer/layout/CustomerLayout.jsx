@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../../stores/useAuthStore'
 import { useQuery } from '@tanstack/react-query'
@@ -22,7 +22,13 @@ export function CustomerLayout() {
     refetchOnWindowFocus: true,
   })
 
-  const cartCount = cartPayload?.summary?.totalQuantity ?? 0
+  /** Tổng số lượng sản phẩm (cộng dồn); fallback từ items nếu summary lệch cache */
+  const cartCount = useMemo(() => {
+    const q = cartPayload?.summary?.totalQuantity
+    if (typeof q === 'number' && Number.isFinite(q)) return q
+    const items = cartPayload?.items ?? []
+    return items.reduce((s, i) => s + (Number(i.quantity) || 0), 0)
+  }, [cartPayload])
 
   useEffect(() => {
     const preventBack = () => {

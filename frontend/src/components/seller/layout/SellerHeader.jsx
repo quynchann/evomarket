@@ -1,14 +1,24 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
+import { Menu, X } from "lucide-react";
 import { useAuthStore } from "../../../stores/useAuthStore";
+import { useSystemSocketStore } from "../../../stores/useSystemSocketStore";
+import { resolveAvatarUrl } from "../../../utils/chatUi.js";
 
 export default function SellerHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
+  const notifUnread = useSystemSocketStore((s) => s.unreadCount);
+  const headerAvatarUrl = resolveAvatarUrl(user?.avatar);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -34,12 +44,17 @@ export default function SellerHeader() {
   const menuItems = [
     { name: "Trang chủ", path: "/seller/home" },
     { name: "Sản phẩm", path: "/seller/products" },
+    { name: "Khuyến mãi", path: "/seller/coupons" },
     { name: "Đơn hàng", path: "/seller/orders" },
     { name: "Chat", path: "/seller/chat" },
-    { name: "Marketing", path: null },
-    { name: "Tài chính", path: null },
-    { name: "Dữ liệu", path: null },
+    { name: "Thông báo", path: "/seller/notifications" },
+    { name: "Báo cáo", path: "/seller/reports" },
   ];
+
+  const goNotifications = () => {
+    navigate("/seller/notifications");
+    setMobileNavOpen(false);
+  };
 
   const handleMenuClick = (item) => {
     if (item.path) {
@@ -47,20 +62,49 @@ export default function SellerHeader() {
     } else {
       toast.info(`Tính năng "${item.name}" đang phát triển`);
     }
+    setMobileNavOpen(false);
   };
 
   return (
     <header className="sticky top-0 z-50 bg-gradient-to-r from-orange-500 to-red-500 text-white shadow">
       <div className="bg-gradient-to-r from-orange-600 to-red-600 py-2">
-        <div className="flex justify-between px-6 text-sm">
-          <div className="flex space-x-4">
-            <span>🏪 Kênh Người Bán</span>
-            <span>Trung tâm hỗ trợ</span>
+        <div className="flex justify-between px-4 text-xs sm:px-6 sm:text-sm">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+            <span className="truncate font-medium">🏪 Kênh Người Bán</span>
+            <button
+              type="button"
+              onClick={() => navigate("/seller/support")}
+              className="min-w-0 truncate text-left font-medium hover:text-orange-200 sm:whitespace-nowrap"
+            >
+              Trung tâm hỗ trợ
+            </button>
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="cursor-pointer hover:text-orange-200">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+            <button
+              type="button"
+              onClick={goNotifications}
+              className="relative hidden cursor-pointer items-center gap-1.5 whitespace-nowrap hover:text-orange-200 md:inline-flex"
+            >
               🔔 Thông báo
-            </span>
+              {notifUnread > 0 ? (
+                <span className="min-w-[1.25rem] rounded-full bg-white px-1.5 text-center text-[10px] font-bold leading-5 text-red-600">
+                  {notifUnread > 99 ? "99+" : notifUnread}
+                </span>
+              ) : null}
+            </button>
+            <button
+              type="button"
+              onClick={goNotifications}
+              className="relative cursor-pointer p-0.5 hover:text-orange-200 md:hidden"
+              aria-label="Thông báo"
+            >
+              🔔
+              {notifUnread > 0 ? (
+                <span className="absolute -right-0.5 -top-0.5 min-w-[0.875rem] rounded-full bg-white px-[3px] text-[9px] font-bold leading-3 text-red-600">
+                  {notifUnread > 9 ? "9+" : notifUnread}
+                </span>
+              ) : null}
+            </button>
             
             {/* User Dropdown */}
             <div className="relative" ref={dropdownRef}>
@@ -68,12 +112,20 @@ export default function SellerHeader() {
                 className="flex items-center space-x-2 cursor-pointer hover:opacity-90 transition"
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               >
-                <img
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32"
-                  alt="avatar"
-                  className="h-8 w-8 rounded-full border-2 border-white"
-                />
-                <span>{user?.fullname || "Bunny Store"}</span>
+                {headerAvatarUrl ? (
+                  <img
+                    src={headerAvatarUrl}
+                    alt=""
+                    className="h-8 w-8 rounded-full border-2 border-white object-cover"
+                  />
+                ) : (
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-white/20 text-sm font-bold">
+                    {user?.fullname?.charAt(0)?.toUpperCase() || "S"}
+                  </span>
+                )}
+                <span className="max-w-[8rem] truncate sm:max-w-none">
+                  {user?.fullname || "Bunny Store"}
+                </span>
               </div>
 
               {/* Dropdown Menu */}
@@ -125,17 +177,21 @@ export default function SellerHeader() {
       </div>
 
       {/* Nav */}
-      <div className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center space-x-8">
-          <h1 className="text-3xl font-bold cursor-pointer" onClick={() => navigate("/seller/home")}>
-            EvoMarket Seller
+      <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex min-w-0 flex-1 items-center gap-4 lg:gap-8">
+          <h1
+            className="cursor-pointer shrink-0 text-lg font-bold sm:text-2xl lg:text-3xl"
+            onClick={() => navigate("/seller/home")}
+          >
+            <span className="lg:hidden">EvoMarket</span>
+            <span className="hidden lg:inline">EvoMarket Seller</span>
           </h1>
-          <nav className="flex space-x-6">
+          <nav className="hidden items-center gap-4 xl:gap-6 lg:flex">
             {menuItems.map((item, i) => (
               <button
                 key={i}
                 onClick={() => handleMenuClick(item)}
-                className={`pb-1 hover:text-orange-200 transition ${
+                className={`shrink-0 pb-1 text-sm transition hover:text-orange-200 ${
                   location.pathname === item.path ? "border-b-2 border-white" : ""
                 }`}
               >
@@ -144,13 +200,50 @@ export default function SellerHeader() {
             ))}
           </nav>
         </div>
-        <button 
-          onClick={() => navigate("/seller/products")}
-          className="rounded-xl bg-white px-4 py-2 font-medium text-orange-500 shadow hover:bg-orange-50 transition"
-        >
-          + Thêm sản phẩm
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white hover:bg-white/25 lg:hidden"
+            aria-expanded={mobileNavOpen}
+            aria-label={mobileNavOpen ? "Đóng menu" : "Mở menu"}
+            onClick={() => setMobileNavOpen((o) => !o)}
+          >
+            {mobileNavOpen ? (
+              <X className="h-6 w-6" aria-hidden />
+            ) : (
+              <Menu className="h-6 w-6" aria-hidden />
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile drawer */}
+      {mobileNavOpen && (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+            aria-label="Đóng menu"
+            onClick={() => setMobileNavOpen(false)}
+          />
+          <nav
+            className="max-h-[min(70vh,420px)] overflow-y-auto border-t border-white/20 bg-gradient-to-br from-orange-600 to-red-600 px-4 py-4 shadow-inner lg:hidden"
+          >
+            {menuItems.map((item, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => handleMenuClick(item)}
+                className={`flex w-full items-center rounded-lg px-3 py-3 text-left text-base font-medium transition hover:bg-white/10 ${
+                  location.pathname === item.path ? "bg-white/15" : ""
+                }`}
+              >
+                {item.name}
+              </button>
+            ))}
+          </nav>
+        </>
+      )}
     </header>
   );
 }

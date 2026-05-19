@@ -17,6 +17,16 @@ module.exports = (sequelize, DataTypes) => {
       User.hasMany(models.Conversation, { as: "ConversationsAsUser1", foreignKey: "user1_id" });
       User.hasMany(models.Conversation, { as: "ConversationsAsUser2", foreignKey: "user2_id" });
       User.hasMany(models.Message, { as: "SentMessages", foreignKey: "sender_id" });
+      User.hasMany(models.UserNotification, { foreignKey: "user_id" });
+      User.hasMany(models.SellerShopVisit, { foreignKey: "seller_id", as: "ShopVisits" });
+      User.hasMany(models.SellerShopFollow, {
+        foreignKey: "seller_id",
+        as: "ReceivedShopFollows",
+      });
+      User.hasMany(models.SellerShopFollow, {
+        foreignKey: "follower_id",
+        as: "GivenShopFollows",
+      });
     }
   }
   User.init(
@@ -41,6 +51,18 @@ module.exports = (sequelize, DataTypes) => {
       },
       avatar: {
         type: DataTypes.STRING(500),
+        allowNull: true,
+      },
+      birthday: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+      },
+      gender: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+      },
+      shop_name: {
+        type: DataTypes.STRING(120),
         allowNull: true,
       },
     },

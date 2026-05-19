@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import * as productService from '../services/product.service.js'
+import * as reviewService from '../services/review.service.js'
 
 /**
  * GET /api/products
@@ -13,6 +14,7 @@ export const getProducts = async (req, res, next) => {
       minPrice,
       maxPrice,
       sortBy,
+      sellerId,
       page = 1,
       limit = 20
     } = req.query
@@ -23,6 +25,7 @@ export const getProducts = async (req, res, next) => {
       minPrice: minPrice ? Number(minPrice) : undefined,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
       sortBy,
+      sellerId: sellerId ? Number(sellerId) : undefined,
       page: Number(page),
       limit: Number(limit)
     }
@@ -33,6 +36,28 @@ export const getProducts = async (req, res, next) => {
       success: true,
       data: result.products,
       pagination: result.pagination
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * POST /api/products/:id/view
+ * Ghi nhận khách xem sản phẩm (đếm unique/shop/ngày), có thể gửi kèm Bearer buyer.
+ */
+export const trackProductView = async (req, res, next) => {
+  try {
+    const productId = Number(req.params.id)
+    const { visitorKey } = req.body ?? {}
+    const result = await productService.recordProductView(productId, {
+      buyerUserId: req.user?.role === 'buyer' ? req.user.id : null,
+      visitorKey,
+      viewerUserId: req.user?.id != null ? req.user.id : null,
+    })
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: result,
     })
   } catch (error) {
     next(error)
@@ -52,6 +77,23 @@ export const getProductDetail = async (req, res, next) => {
       success: true,
       data: product
     })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * GET /api/products/:id/reviews
+ */
+export const getProductReviews = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const { page = 1, limit = 10 } = req.query
+    const data = await reviewService.listPublicReviewsForProduct(id, {
+      page: Number(page),
+      limit: Number(limit),
+    })
+    res.status(StatusCodes.OK).json({ success: true, data })
   } catch (error) {
     next(error)
   }

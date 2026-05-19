@@ -17,6 +17,9 @@ module.exports = (sequelize, DataTypes) => {
       method: DataTypes.ENUM("COD", "Online"),
       status: DataTypes.ENUM("Success", "Failed", "Pending"),
       coupons_id: DataTypes.INTEGER,
+      vnpay_transaction_no: DataTypes.STRING(32),
+      vnpay_transaction_date: DataTypes.STRING(20),
+      refunded_at: DataTypes.DATE,
     },
     {
       sequelize,

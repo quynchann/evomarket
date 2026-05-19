@@ -13,7 +13,7 @@ module.exports = {
         address: '123 Nguyễn Huệ, Hoàn Kiếm, Hà Nội',
         total_price: 500000,
         payment_method: 'Online',
-        status: 'Delivered',
+        status: 'COMPLETED',
         created_at: new Date('2026-03-15'),
         updated_at: new Date('2026-03-20')
       },
@@ -39,7 +39,7 @@ module.exports = {
         address: '321 Nguyễn Trãi, Hải Châu, Đà Nẵng',
         total_price: 450000,
         payment_method: 'Online',
-        status: 'Processing',
+        status: 'PREPARING',
         created_at: new Date('2026-03-25'),
         updated_at: new Date('2026-03-26')
       },
@@ -52,7 +52,7 @@ module.exports = {
         address: '123 Nguyễn Huệ, Hoàn Kiếm, Hà Nội',
         total_price: 350000,
         payment_method: 'COD',
-        status: 'Pending',
+        status: 'PENDING_CONFIRMATION',
         created_at: new Date('2026-03-28'),
         updated_at: new Date('2026-03-28')
       },
@@ -65,7 +65,7 @@ module.exports = {
         address: '789 Lê Lợi, Quận 1, Hồ Chí Minh',
         total_price: 280000,
         payment_method: 'Online',
-        status: 'Cancelled',
+        status: 'CANCELLED',
         created_at: new Date('2026-03-10'),
         updated_at: new Date('2026-03-11')
       }

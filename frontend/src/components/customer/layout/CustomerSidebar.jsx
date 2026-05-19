@@ -23,17 +23,19 @@ import {
 } from '@/components/ui/sidebar'
 import logoEvo from '../../../assets/logo-evo.png'
 import { useSidebar } from '@/components/ui/sidebar'
+import { useSystemSocketStore } from '@/stores/useSystemSocketStore'
 
 export function CustomerSidebar({ cartCount = 0 }) {
   const location = useLocation()
   const { open, isMobile } = useSidebar()
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const unreadCount = useSystemSocketStore((s) => s.unreadCount)
 
   const profileSubmenus = [
     { title: 'Hồ Sơ', url: '/customer/profile' },
     { title: 'Ví thanh toán', url: '/customer/bank' },
     { title: 'Địa Chỉ', url: '/customer/address' },
-    { title: 'Cài Đặt Thông Báo', url: '/customer/notifications' },
+    { title: 'Cài Đặt Thông Báo', url: '/customer/notification-settings' },
     { title: 'Những Thiết Lập Riêng Tư', url: '/customer/privacy-settings' },
     { title: 'Thông Tin Cá Nhân', url: '/customer/personal-info' },
   ]
@@ -65,7 +67,7 @@ export function CustomerSidebar({ cartCount = 0 }) {
       title: 'Thông báo',
       icon: Bell,
       url: '/customer/notifications',
-      badge: 3,
+      badge: unreadCount > 0 ? unreadCount : 0,
     },
     {
       title: 'Chat',
@@ -105,7 +107,10 @@ export function CustomerSidebar({ cartCount = 0 }) {
           <SidebarGroupContent>
             <SidebarMenu className="pt-6">
               {menuItems.map((item) => {
-                const isActive = location.pathname === item.url
+                const isActive =
+                  item.url === '/customer/orders'
+                    ? location.pathname.startsWith('/customer/orders')
+                    : location.pathname === item.url
                 const isProfileSection =
                   item.hasSubmenu &&
                   profileSubmenus.some((sub) => location.pathname === sub.url)

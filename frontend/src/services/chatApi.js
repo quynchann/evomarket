@@ -45,4 +45,6 @@ export const chatApi = {
 export const chatQueryKeys = {
   conversations: (limit) => ['chat', 'conversations', limit],
   messages: (conversationId, limit) => ['chat', 'messages', conversationId, limit],
+  /** Dùng chung cho dashboard + ChatShell sau markAsRead */
+  unreadCount: ['chat', 'unread-count'],
 }

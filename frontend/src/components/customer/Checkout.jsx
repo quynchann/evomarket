@@ -1,10 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cartApi, cartQueryKeys } from "../../services/cartApi";
+import { checkoutApi, checkoutQueryKeys } from "../../services/checkoutApi";
+import { couponQueryKeys } from "../../services/couponApi";
 import { buildCreateOrderRequestBody } from "../../utils/checkoutOrderPayload";
 import { useAuthStore } from "../../stores/useAuthStore";
+import { VNPAY_GATEWAY_ID, ONLINE_GATEWAYS } from "../../constants/onlineGateways";
 import logoEvo from "../../assets/logo-evo.png";
 
 const SHELL = "w-full max-w-[min(100%,92rem)] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12";
@@ -20,7 +23,8 @@ function groupBySeller(items) {
   const map = new Map();
   for (const item of items) {
     const sid = item.seller?.id ?? 0;
-    const name = item.seller?.fullname || "Người bán";
+    const name =
+      item.seller?.shopName || item.seller?.fullname || "Người bán";
     if (!map.has(sid)) {
       map.set(sid, { sellerId: sid, sellerName: name, items: [] });
     }
@@ -29,28 +33,19 @@ function groupBySeller(items) {
   return Array.from(map.values());
 }
 
-// Mock địa chỉ — sau này thay bằng checkoutApi.getAddresses(); giữ cố định để useEffect chỉ chạy mount
-const MOCK_ADDRESSES = [
-  {
-    id: 1,
-    name: "Nguyễn Văn A",
-    phone: "0901234567",
-    address: "123 Đường ABC, Phường 1, Quận Bình Thạnh, TP.HCM",
-    isDefault: true,
-  },
-  {
-    id: 2,
-    name: "Nguyễn Văn A",
-    phone: "0987654321",
-    address: "25 Nguyễn Khuyến, Phường 12, Quận 10, TP.HCM",
-    isDefault: false,
-  },
-];
+function formatAddressLine(addr) {
+  if (!addr) return "";
+  const parts = [addr.address, addr.state, addr.city, addr.country].filter(Boolean);
+  return parts.join(", ");
+}
 
 export default function Checkout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+
+  const lineIdsFromNav = location.state?.lineIds;
 
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [shippingMethod, setShippingMethod] = useState("standard");
@@ -66,36 +61,163 @@ export default function Checkout() {
     },
   });
 
+  const { data: addressList = [], isLoading: addrLoading } = useQuery({
+    queryKey: checkoutQueryKeys.addresses,
+    queryFn: async () => {
+      const res = await checkoutApi.getAddresses();
+      return Array.isArray(res.data) ? res.data : [];
+    },
+  });
+
   useEffect(() => {
-    const defaultAddr = MOCK_ADDRESSES.find((a) => a.isDefault);
-    if (defaultAddr) setSelectedAddressId(defaultAddr.id);
-  }, []);
+    if (!addressList.length) {
+      setSelectedAddressId(null);
+      return;
+    }
+    const def = addressList.find((a) => a.isDefault);
+    setSelectedAddressId((prev) => {
+      if (prev != null && addressList.some((a) => a.id === prev)) return prev;
+      return def?.id ?? addressList[0].id;
+    });
+  }, [addressList]);
 
-  const selectedAddress = MOCK_ADDRESSES.find((a) => a.id === selectedAddressId);
+  const platformCoupon = location.state?.platformCoupon ?? null;
+  const shopVouchersState = location.state?.shopVouchers ?? {};
 
-  const items = cartData?.items ?? [];
+  const allCartItems = cartData?.items ?? [];
+  const items = useMemo(() => {
+    if (!Array.isArray(lineIdsFromNav) || lineIdsFromNav.length === 0) {
+      return allCartItems;
+    }
+    const set = new Set(lineIdsFromNav.map((id) => Number(id)));
+    return allCartItems.filter((i) => set.has(Number(i.id)));
+  }, [allCartItems, lineIdsFromNav]);
+
+  const selectedAddress = addressList.find((a) => a.id === selectedAddressId) ?? null;
+
   const grouped = useMemo(() => groupBySeller(items), [items]);
 
   // Calculate totals
   const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
-  
+
+  const shopSubtotals = useMemo(() => {
+    const totals = {};
+    for (const item of items) {
+      const sid = item.seller?.id ?? 0;
+      const key = String(sid);
+      if (!totals[key]) totals[key] = 0;
+      totals[key] += item.lineTotal;
+    }
+    return totals;
+  }, [items]);
+
+  const shopVoucherDiscount = useMemo(() => {
+    let totalDiscount = 0;
+    Object.entries(shopVouchersState).forEach(([shopKey, voucher]) => {
+      if (!voucher) return;
+      const shopTotal = shopSubtotals[shopKey] ?? 0;
+      if (shopTotal < voucher.minOrder) return;
+      if (voucher.type === "percentage") {
+        const discount = (shopTotal * voucher.discount) / 100;
+        totalDiscount += Math.min(discount, voucher.maxDiscount);
+      } else {
+        totalDiscount += voucher.discount;
+      }
+    });
+    return totalDiscount;
+  }, [shopVouchersState, shopSubtotals]);
+
+  const platformCouponDiscount = useMemo(() => {
+    if (!platformCoupon || subtotal < platformCoupon.minOrder) return 0;
+    if (platformCoupon.type === "percentage") {
+      const discount = (subtotal * platformCoupon.discount) / 100;
+      return Math.min(discount, platformCoupon.maxDiscount);
+    }
+    return platformCoupon.discount;
+  }, [platformCoupon, subtotal]);
+
   const shippingFee = useMemo(() => {
     if (shippingMethod === "express") return 15000;
     return 0; // free shipping for standard
   }, [shippingMethod]);
 
-  const total = subtotal + shippingFee;
+  const total = Math.max(
+    0,
+    subtotal - shopVoucherDiscount - platformCouponDiscount + shippingFee,
+  );
 
   // Create order mutation
   const createOrderMutation = useMutation({
-    mutationFn: async (_orderBody) => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return { orderId: "EVO" + Date.now() };
+    mutationFn: async ({ orderBody, paymentMethod }) => {
+      const res = await checkoutApi.createOrder(orderBody);
+      const order = res?.data?.order;
+      const id = order?.id;
+      if (id == null) {
+        throw new Error(res?.message || "Không nhận được mã đơn hàng từ máy chủ");
+      }
+      const orderId = String(id);
+      const totalFromServer =
+        order?.total_price != null ? Number(order.total_price) : null;
+
+      if (paymentMethod === "online") {
+        try {
+          const payRes = await checkoutApi.createVNPayUrl(orderId);
+          const url = payRes?.data?.paymentUrl;
+          if (typeof url === "string" && url.startsWith("http")) {
+            return {
+              orderId,
+              mode: "vnpay-redirect",
+              paymentUrl: url,
+              orderTotalFromServer: totalFromServer,
+            };
+          }
+        } catch {
+          /* Vẫn cho phép sang màn thành công để bấm thanh toán lại */
+        }
+        return {
+          orderId,
+          mode: "online-pending-url",
+          orderTotalFromServer: totalFromServer,
+        };
+      }
+
+      return {
+        orderId,
+        mode: "cod",
+        orderTotalFromServer: totalFromServer,
+      };
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries(cartQueryKeys.cart);
-      toast.success("Đặt hàng thành công!");
-      navigate(`/customer/order-success/${data.orderId}`);
+      queryClient.invalidateQueries({ queryKey: ["buyer-orders"] });
+      queryClient.invalidateQueries({ queryKey: couponQueryKeys.platform });
+      queryClient.invalidateQueries({ queryKey: ["coupons", "shop"] });
+
+      if (data.mode === "vnpay-redirect" && data.paymentUrl) {
+        toast.success("Đang chuyển đến VNPay...");
+        window.location.assign(data.paymentUrl);
+        return;
+      }
+
+      const isOnline = variables.paymentMethod === "online";
+      toast.success(
+        isOnline
+          ? "Đơn hàng đã được tạo — bạn có thể thanh toán VNPay ở bước tiếp theo"
+          : "Đặt hàng thành công!",
+      );
+      const resolvedTotal =
+        typeof data.orderTotalFromServer === "number" && !Number.isNaN(data.orderTotalFromServer)
+          ? data.orderTotalFromServer
+          : variables.orderTotal;
+
+      navigate(`/customer/order-success/${data.orderId}`, {
+        replace: true,
+        state: {
+          paymentUi: variables.paymentMethod,
+          onlineGateway: isOnline ? VNPAY_GATEWAY_ID : null,
+          orderTotal: resolvedTotal,
+        },
+      });
     },
     onError: (err) => {
       toast.error(err.message || "Không thể đặt hàng");
@@ -119,19 +241,54 @@ export default function Checkout() {
       return;
     }
 
-    const orderBody = buildCreateOrderRequestBody({
-      cartItems: items,
-      fullname: selectedAddress.name,
-      email,
-      phone: selectedAddress.phone,
-      address: selectedAddress.address,
-      paymentUi: paymentMethod,
+    const fullname = (selectedAddress.recipientFullname || user?.fullname || "").trim();
+    const phone = (selectedAddress.recipientPhone || user?.phone_number || "").trim();
+    const addressLine = formatAddressLine(selectedAddress).trim();
+
+    if (!fullname) {
+      toast.error("Thiếu họ tên người nhận — vui lòng cập nhật địa chỉ");
+      return;
+    }
+    if (!phone) {
+      toast.error("Thiếu số điện thoại — vui lòng cập nhật địa chỉ");
+      return;
+    }
+    if (!addressLine) {
+      toast.error("Thiếu địa chỉ giao hàng");
+      return;
+    }
+
+    const shopCouponsPayload = {};
+    Object.entries(shopVouchersState).forEach(([sid, v]) => {
+      if (v?.code && String(v.code).trim()) {
+        shopCouponsPayload[String(sid)] = String(v.code).trim();
+      }
     });
 
-    createOrderMutation.mutate(orderBody);
+    const orderBody = buildCreateOrderRequestBody({
+      cartItems: items,
+      fullname,
+      email,
+      phone,
+      address: addressLine,
+      paymentUi: paymentMethod,
+      shippingMethod,
+      couponCode:
+        platformCoupon && platformCouponDiscount > 0 ? platformCoupon.code : undefined,
+      shopCoupons: Object.keys(shopCouponsPayload).length ? shopCouponsPayload : undefined,
+      buyerNote: note,
+    });
+
+    createOrderMutation.mutate({
+      orderBody,
+      paymentMethod,
+      orderTotal: total,
+    });
   };
 
-  if (cartLoading) {
+  const pageLoading = cartLoading || addrLoading;
+
+  if (pageLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-orange-100/90 via-orange-50/70 to-amber-50/40 flex items-center justify-center">
         <div className="text-center">
@@ -193,37 +350,61 @@ export default function Checkout() {
                   Địa chỉ giao hàng
                 </h2>
                 <Link
-                  to="/customer/profile"
+                  to="/customer/address"
                   className="text-sm font-medium text-orange-600 hover:text-orange-700"
                 >
                   Thay đổi
                 </Link>
               </div>
 
-              {selectedAddress ? (
-                <div className="rounded-lg border border-orange-200 bg-orange-50/50 p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-semibold text-gray-900">{selectedAddress.name}</p>
-                      <p className="text-sm text-gray-600">{selectedAddress.phone}</p>
-                      <p className="mt-1 text-sm text-gray-700">{selectedAddress.address}</p>
-                    </div>
-                    {selectedAddress.isDefault && (
-                      <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
-                        Mặc định
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ) : (
+              {addrLoading ? (
+                <div className="animate-pulse h-24 rounded-lg bg-gray-100" />
+              ) : addressList.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500 mb-4">Chưa có địa chỉ giao hàng</p>
+                  <p className="text-gray-500 mb-4">Bạn chưa có địa chỉ giao hàng</p>
                   <Link
-                    to="/customer/profile"
+                    to="/customer/address"
                     className="inline-block px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
                   >
                     Thêm địa chỉ
                   </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {addressList.map((addr) => {
+                    const checked = selectedAddressId === addr.id;
+                    return (
+                      <label
+                        key={addr.id}
+                        className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition ${
+                          checked ? "border-orange-500 bg-orange-50/50" : "border-gray-200 hover:border-orange-200"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="checkout-address"
+                          checked={checked}
+                          onChange={() => setSelectedAddressId(addr.id)}
+                          className="mt-1 h-4 w-4 text-orange-600"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold text-gray-900">{addr.label || "Địa chỉ"}</span>
+                            {addr.isDefault && (
+                              <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                                Mặc định
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium text-gray-800">
+                            {addr.recipientFullname || user?.fullname}
+                          </p>
+                          <p className="text-sm text-gray-600">{addr.recipientPhone || user?.phone_number || "—"}</p>
+                          <p className="mt-1 text-sm text-gray-700">{formatAddressLine(addr)}</p>
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -334,7 +515,13 @@ export default function Checkout() {
               </h2>
 
               <div className="space-y-3">
-                <label className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-gray-200 p-4 transition hover:border-orange-300">
+                <label
+                  className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-4 transition ${
+                    paymentMethod === "cod"
+                      ? "border-orange-500 bg-orange-50/50 shadow-sm shadow-orange-100/50"
+                      : "border-gray-200 hover:border-orange-200"
+                  }`}
+                >
                   <input
                     type="radio"
                     name="payment"
@@ -343,25 +530,62 @@ export default function Checkout() {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="h-4 w-4 text-orange-600"
                   />
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-100 text-orange-700">
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </span>
                   <div className="flex-1">
                     <p className="font-medium text-gray-900">Thanh toán khi nhận hàng (COD)</p>
-                    <p className="text-sm text-gray-500">Thanh toán bằng tiền mặt khi nhận hàng</p>
+                    <p className="text-sm text-gray-500">Thanh toán tiền mặt khi shipper giao hàng</p>
                   </div>
                 </label>
 
-                <label className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-gray-200 p-4 transition hover:border-orange-300 opacity-60">
+                <label
+                  className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-4 transition ${
+                    paymentMethod === "online"
+                      ? "border-orange-500 bg-orange-50/50 shadow-sm shadow-orange-100/50"
+                      : "border-gray-200 hover:border-orange-200"
+                  }`}
+                >
                   <input
                     type="radio"
                     name="payment"
                     value="online"
-                    disabled
+                    checked={paymentMethod === "online"}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
                     className="h-4 w-4 text-orange-600"
                   />
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-700">
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  </span>
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">Thanh toán online</p>
-                    <p className="text-sm text-gray-500">VNPay, MoMo, ZaloPay (Sắp có)</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-gray-900">Thanh toán trực tuyến</p>
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+                        Khuyên dùng
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500">Thanh toán qua VNPay — thẻ, QR và ví được hỗ trợ bởi cổng</p>
                   </div>
                 </label>
+
+                {paymentMethod === "online" && (
+                  <div
+                    className="ml-4 space-y-2 rounded-xl border border-dashed border-orange-200 bg-gradient-to-br from-orange-50/80 to-amber-50/40 p-4 sm:ml-8"
+                    role="region"
+                    aria-label="Thanh toán qua VNPay"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wide text-orange-900/80">VNPay</p>
+                    <p className="text-sm font-semibold text-gray-900">{ONLINE_GATEWAYS[0].label}</p>
+                    <p className="text-[11px] leading-relaxed text-gray-600">{ONLINE_GATEWAYS[0].description}</p>
+                    <p className="text-[11px] leading-relaxed text-gray-600">
+                      Sau khi đặt hàng, bạn sẽ được chuyển tới cổng VNPay để hoàn tất thanh toán (thẻ, QR hoặc ví).
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -393,6 +617,20 @@ export default function Checkout() {
                   <span className="text-gray-600">Tạm tính</span>
                   <span className="font-medium">{formatPrice(subtotal)}</span>
                 </div>
+                {shopVoucherDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-700">
+                    <span>Voucher shop</span>
+                    <span className="font-medium">−{formatPrice(shopVoucherDiscount)}</span>
+                  </div>
+                )}
+                {platformCouponDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-700">
+                    <span>
+                      Voucher sàn{platformCoupon?.code ? ` (${platformCoupon.code})` : ""}
+                    </span>
+                    <span className="font-medium">−{formatPrice(platformCouponDiscount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-600">Phí vận chuyển</span>
                   <span className="font-medium text-green-600">
@@ -406,12 +644,22 @@ export default function Checkout() {
                 <span className="text-2xl font-bold text-orange-600">{formatPrice(total)}</span>
               </div>
 
+              {paymentMethod === "online" && (
+                <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-950/90">
+                  Thanh toán qua <strong>VNPay</strong>. Sau khi đặt hàng, trình duyệt sẽ chuyển sang trang của VNPay để hoàn tất.
+                </p>
+              )}
+
               <button
                 onClick={handlePlaceOrder}
-                disabled={!selectedAddressId || createOrderMutation.isPending}
+                disabled={!selectedAddressId || addressList.length === 0 || createOrderMutation.isPending}
                 className="mt-4 w-full rounded-lg bg-orange-600 px-6 py-4 font-semibold text-white shadow-lg shadow-orange-300/40 transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {createOrderMutation.isPending ? "Đang xử lý..." : "Đặt hàng"}
+                {createOrderMutation.isPending
+                  ? "Đang xử lý..."
+                  : paymentMethod === "online"
+                    ? `Đặt hàng và thanh toán — ${ONLINE_GATEWAYS[0]?.label ?? "VNPay"}`
+                    : "Đặt hàng"}
               </button>
 
               <p className="mt-3 text-center text-xs text-gray-500">

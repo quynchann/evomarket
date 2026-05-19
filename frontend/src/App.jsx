@@ -26,22 +26,30 @@ function App() {
   useEffect(() => {
     const protectedPaths = [
       "/customer/homepage",
+      "/customer/categories",
       "/customer/profile",
       "/customer/chat",
+      "/customer/bank",
       "/customer/address",
       "/customer/notifications",
+      "/customer/notification-settings",
       "/customer/privacy-settings",
       "/customer/personal-info",
       "/customer/cart",
       "/customer/checkout",
       "/customer/order-success",
+      "/customer/orders",
+      "/customer/support",
       "/seller/home",
       "/seller/products",
+      "/seller/coupons",
       "/seller/orders",
       "/seller/chat",
+      "/seller/support",
       "/admin/dashboard",
       "/admin/user-management",
       "/admin/product-management",
+      "/admin/chat",
     ];
 
     const isProtectedPath = protectedPaths.some((path) =>

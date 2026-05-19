@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 .env
+
+# Local uploads (do not commit user/product images)
+uploads/

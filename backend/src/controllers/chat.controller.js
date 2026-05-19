@@ -1,4 +1,5 @@
 import * as chatService from '../services/chat.service.js'
+import { User } from '../models/index.js'
 import { emitNewMessage } from '../sockets/emitters/chat.emitter.js'
 import { ApiError } from '../utils/api-error.js'
 import { StatusCodes } from 'http-status-codes'
@@ -12,11 +13,15 @@ export const getConversations = async (req, res, next) => {
     const userId = req.user.id
     const { limit, after, before } = req.query
 
-    const result = await chatService.getConversations(userId, {
-      limit,
-      after,
-      before
-    })
+    const result = await chatService.getConversations(
+      userId,
+      {
+        limit,
+        after,
+        before
+      },
+      req.user.role
+    )
 
     return res.status(StatusCodes.OK).json({
       success: true,
@@ -38,11 +43,16 @@ export const getMessages = async (req, res, next) => {
     const { conversationId } = req.params
     const { limit, after, before } = req.query
 
-    const result = await chatService.getMessages(conversationId, userId, {
-      limit,
-      after,
-      before
-    })
+    const result = await chatService.getMessages(
+      conversationId,
+      userId,
+      {
+        limit,
+        after,
+        before
+      },
+      req.user.role
+    )
 
     return res.status(StatusCodes.OK).json({
       success: true,
@@ -71,7 +81,8 @@ export const createConversation = async (req, res, next) => {
       )
     }
 
-    if (parseInt(otherUserId) === userId) {
+    const otherId = parseInt(otherUserId, 10)
+    if (otherId === userId) {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
         'Cannot create conversation with yourself',
@@ -79,9 +90,28 @@ export const createConversation = async (req, res, next) => {
       )
     }
 
+    const other = await User.findByPk(otherId, {
+      attributes: ['id', 'role']
+    })
+    if (!other) {
+      throw new ApiError(
+        StatusCodes.NOT_FOUND,
+        'User not found',
+        'USER_NOT_FOUND'
+      )
+    }
+
+    if (req.user.role === 'admin' && other.role !== 'seller') {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Admin can only chat with sellers',
+        'ADMIN_SELLER_CHAT_ONLY'
+      )
+    }
+
     const conversation = await chatService.getOrCreateConversation(
       userId,
-      otherUserId
+      otherId
     )
 
     return res.status(StatusCodes.OK).json({
@@ -113,7 +143,8 @@ export const sendMessage = async (req, res, next) => {
     const message = await chatService.sendMessage(
       conversationId,
       userId,
-      content.trim()
+      content.trim(),
+      { userRole: req.user.role }
     )
 
     const payload = chatService.messageToSocketPayload(message)
@@ -137,7 +168,11 @@ export const markAsRead = async (req, res, next) => {
     const userId = req.user.id
     const { conversationId } = req.params
 
-    const result = await chatService.markMessagesAsRead(conversationId, userId)
+    const result = await chatService.markMessagesAsRead(
+      conversationId,
+      userId,
+      req.user.role
+    )
 
     return res.status(StatusCodes.OK).json({
       success: true,
@@ -156,7 +191,7 @@ export const getUnreadCount = async (req, res, next) => {
   try {
     const userId = req.user.id
 
-    const result = await chatService.getUnreadCount(userId)
+    const result = await chatService.getUnreadCount(userId, req.user.role)
 
     return res.status(StatusCodes.OK).json({
       success: true,

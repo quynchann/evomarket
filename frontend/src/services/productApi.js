@@ -101,3 +101,39 @@ export const searchProducts = async (query, filters = {}) => {
   
   return response.json();
 };
+
+const VISITOR_KEY = 'evm_shop_visit_vid';
+
+/** Khóa ẩn danh cho đếm lượt xem shop (8–64 ký tự). */
+export function getOrCreateVisitorKey() {
+  try {
+    let k = localStorage.getItem(VISITOR_KEY);
+    if (k && /^[a-zA-Z0-9_-]{8,64}$/.test(k)) return k;
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    k = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').slice(0, 20);
+    localStorage.setItem(VISITOR_KEY, k);
+    return k;
+  } catch {
+    return `g${Date.now().toString(36)}x${Math.random().toString(36).slice(2, 12)}`;
+  }
+}
+
+/**
+ * Ghi nhận xem trang sản phẩm (cập nhật khách truy cập shop khi là lượt unique mới trong ngày).
+ */
+export async function trackProductView(productId, { accessToken, isBuyer } = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  const body = isBuyer ? {} : { visitorKey: getOrCreateVisitorKey() };
+  const response = await fetch(`${API_URL}/products/${productId}/view`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || err.message || 'Failed to track view');
+  }
+  return response.json();
+}

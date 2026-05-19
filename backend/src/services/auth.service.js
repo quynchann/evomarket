@@ -179,3 +179,124 @@ export const getProfile = async (userId) => {
   }
   return publicUser(user)
 }
+
+export const updateAvatar = async (userId, avatarPath) => {
+  await userRepo.updateById(userId, { avatar: avatarPath })
+  return getProfile(userId)
+}
+
+export const updateProfile = async (userId, { fullname, phone_number, birthday, gender, shop_name }) => {
+  const updates = {}
+
+  if (fullname !== undefined) {
+    const name = String(fullname).trim()
+    if (!name)
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Vui lòng nhập họ và tên',
+        'FULLNAME_REQUIRED'
+      )
+    updates.fullname = name
+  }
+
+  if (phone_number !== undefined) {
+    const raw = phone_number == null ? '' : String(phone_number).trim()
+    const phone = raw === '' ? null : raw
+    if (phone) {
+      const existing = await userRepo.findByPhone(phone)
+      if (existing && existing.id !== userId)
+        throw new ApiError(
+          StatusCodes.CONFLICT,
+          'Số điện thoại đã được dùng cho tài khoản khác',
+          'PHONE_EXISTS'
+        )
+    }
+    updates.phone_number = phone
+  }
+
+  if (birthday !== undefined) {
+    const b = birthday == null || String(birthday).trim() === '' ? null : String(birthday).trim()
+    updates.birthday = b
+  }
+
+  if (gender !== undefined) {
+    const g = gender == null || String(gender).trim() === '' ? null : String(gender).trim()
+    updates.gender = g
+  }
+
+  if (shop_name !== undefined) {
+    const u = await userRepo.findById(userId)
+    if (!u || u.role !== 'seller') {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Chỉ tài khoản người bán mới đặt được tên shop',
+        'SHOP_NAME_NOT_ALLOWED',
+      )
+    }
+    const raw = shop_name == null ? '' : String(shop_name).trim()
+    updates.shop_name = raw === '' ? null : raw.slice(0, 120)
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return getProfile(userId)
+  }
+
+  await userRepo.updateById(userId, updates)
+  return getProfile(userId)
+}
+
+export const changePassword = async (
+  userId,
+  { current_password, new_password }
+) => {
+  if (current_password == null || new_password == null) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Vui lòng nhập đủ thông tin',
+      'VALIDATION_ERROR'
+    )
+  }
+
+  const user = await userRepo.findById(userId)
+  if (!user) {
+    throw new ApiError(
+      StatusCodes.NOT_FOUND,
+      'Không tìm thấy người dùng',
+      'USER_NOT_FOUND'
+    )
+  }
+
+  const currentOk = await comparePassword(
+    String(current_password),
+    user.password
+  )
+  if (!currentOk) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Mật khẩu hiện tại không đúng',
+      'INVALID_CURRENT_PASSWORD'
+    )
+  }
+
+  const next = String(new_password).trim()
+  if (next.length < 8) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Mật khẩu mới phải có ít nhất 8 ký tự',
+      'WEAK_PASSWORD'
+    )
+  }
+
+  const sameAsOld = await comparePassword(next, user.password)
+  if (sameAsOld) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Mật khẩu mới phải khác mật khẩu hiện tại',
+      'SAME_PASSWORD'
+    )
+  }
+
+  const hashed = await hashPassword(next)
+  await userRepo.updateById(userId, { password: hashed })
+  await refreshTokenRepo.revokeAllUserTokens(userId)
+}

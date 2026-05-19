@@ -142,9 +142,9 @@ export default function HomePage() {
                       <div
                         key={cat.id}
                         className="group flex flex-col items-center rounded-3xl bg-white p-8 text-base font-semibold text-gray-700 shadow-lg transition-all hover:shadow-2xl hover:-translate-y-3 cursor-pointer border-2 border-gray-100 hover:border-orange-300"
-                        onClick={() => {
-                          console.log('Category clicked:', cat.id);
-                        }}
+                        onClick={() =>
+                          navigate(`/customer/categories/${cat.id}`)
+                        }
                       >
                         <div className="mb-5 flex h-32 w-32 items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-br from-orange-400 to-red-500 shadow-xl transition-transform group-hover:scale-110 group-hover:rotate-3">
                           {["Mũ", "Kính", "Hoa tai", "Vòng cổ"].includes(cat.name) ? (

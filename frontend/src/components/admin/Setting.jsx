@@ -695,18 +695,11 @@ const SettingsPage = () => {
                 <h4 className="mb-3 flex items-center font-bold text-red-800">
                   <span className="mr-2">🛡️</span> Cấu hình bảo mật cao
                 </h4>
-                <ToggleSwitch
-                  label="Bật xác thực 2 bước (2FA) cho Admin"
-                  checked={false}
-                  onChange={() => {}}
+                <InputField
+                  label="Thời gian hết hạn phiên đăng nhập (phút)"
+                  type="number"
+                  value="60"
                 />
-                <div className="mt-4">
-                  <InputField
-                    label="Thời gian hết hạn phiên đăng nhập (phút)"
-                    type="number"
-                    value="60"
-                  />
-                </div>
               </div>
 
               <div className="mb-4">

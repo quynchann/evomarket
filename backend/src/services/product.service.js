@@ -1,9 +1,30 @@
-import { Category, Product, User } from '../models/index.js'
+import { Category, Product, User, sequelize } from '../models/index.js'
 import ApiError from '../utils/api-error.js'
 import { StatusCodes } from 'http-status-codes'
-import { Op } from 'sequelize'
+import { Op, QueryTypes } from 'sequelize'
+import { getSellerTodayStats } from './order.service.js'
+import { emitSellerTodayStats } from '../sockets/emitters/system.emitter.js'
+import { getProductRatingBatch } from './review.service.js'
+
+const emptyRatingSummary = () => ({ average: null, count: 0 })
+
+const withRatingSummaries = async (dtos) => {
+  if (!dtos?.length) return dtos
+  const batch = await getProductRatingBatch(dtos.map((d) => d.id))
+  return dtos.map((d) => ({
+    ...d,
+    ratingSummary: batch.get(d.id) || emptyRatingSummary(),
+  }))
+}
 
 const toPlain = (row) => (row?.get ? row.get({ plain: true }) : row)
+
+const sellerDisplayName = (seller) => {
+  const sn =
+    seller?.shop_name != null ? String(seller.shop_name).trim() : ''
+  const fn = seller?.fullname != null ? String(seller.fullname).trim() : ''
+  return sn || fn || 'Seller'
+}
 
 /**
  * Map product to public DTO (for buyers)
@@ -45,7 +66,8 @@ export const mapProductToPublicDto = (row) => {
     },
     seller: {
       id: seller.id,
-      fullname: seller.fullname || 'Seller'
+      fullname: seller.fullname || 'Seller',
+      shopName: sellerDisplayName(seller),
     },
     stock: available,
     sold: Number(plain.sold) || 0,
@@ -66,6 +88,7 @@ export const getPublicProducts = async (filters = {}) => {
     minPrice,
     maxPrice,
     sortBy = 'latest', // latest, popular, price_asc, price_desc
+    sellerId,
     page = 1,
     limit = 20
   } = filters
@@ -73,6 +96,11 @@ export const getPublicProducts = async (filters = {}) => {
   const where = {
     deleted: false,
     available: { [Op.gt]: 0 } // Chỉ lấy sản phẩm còn hàng
+  }
+
+  const sid = sellerId != null ? Number(sellerId) : NaN
+  if (Number.isFinite(sid)) {
+    where.seller_id = sid
   }
 
   // Filter by category
@@ -116,7 +144,7 @@ export const getPublicProducts = async (filters = {}) => {
       {
         model: User,
         as: 'Seller',
-        attributes: ['id', 'fullname']
+        attributes: ['id', 'fullname', 'shop_name']
       }
     ],
     order,
@@ -126,7 +154,7 @@ export const getPublicProducts = async (filters = {}) => {
   })
 
   return {
-    products: rows.map(mapProductToPublicDto),
+    products: await withRatingSummaries(rows.map(mapProductToPublicDto)),
     pagination: {
       total: count,
       page: Number(page),
@@ -153,7 +181,7 @@ export const getProductById = async (productId) => {
       {
         model: User,
         as: 'Seller',
-        attributes: ['id', 'fullname', 'email']
+        attributes: ['id', 'fullname', 'email', 'shop_name']
       }
     ]
   })
@@ -166,7 +194,9 @@ export const getProductById = async (productId) => {
     )
   }
 
-  return mapProductToPublicDto(product)
+  const dto = mapProductToPublicDto(product)
+  const [withRating] = await withRatingSummaries([dto])
+  return withRating
 }
 
 /**
@@ -223,14 +253,81 @@ export const getFeaturedProducts = async (limit = 8) => {
       {
         model: User,
         as: 'Seller',
-        attributes: ['id', 'fullname']
+        attributes: ['id', 'fullname', 'shop_name']
       }
     ],
     order: [['sold', 'DESC']], // Sản phẩm bán chạy nhất
     limit: Number(limit)
   })
 
-  return products.map(mapProductToPublicDto)
+  return withRatingSummaries(products.map(mapProductToPublicDto))
+}
+
+/**
+ * Ghi nhận lượt xem sản phẩm → đếm khách duy nhất theo shop trong ngày (bảng SellerShopVisits).
+ * @param {number|string} productId
+ * @param {{ buyerUserId: number|null, visitorKey: string|undefined, viewerUserId: number|null }} opts
+ */
+export const recordProductView = async (
+  productId,
+  { buyerUserId = null, visitorKey, viewerUserId = null } = {},
+) => {
+  const pid = Number(productId)
+  if (!Number.isFinite(pid)) {
+    return { recorded: false, reason: 'invalid_product' }
+  }
+
+  const product = await Product.findOne({
+    where: { id: pid, deleted: false },
+    attributes: ['id', 'seller_id'],
+  })
+  if (!product) {
+    return { recorded: false, reason: 'not_found' }
+  }
+
+  const sellerId = Number(product.seller_id)
+  if (!Number.isFinite(sellerId)) {
+    return { recorded: false, reason: 'invalid_seller' }
+  }
+
+  if (
+    viewerUserId != null &&
+    Number(viewerUserId) === sellerId
+  ) {
+    return { recorded: false, skipped: 'self' }
+  }
+
+  let storageKey
+  if (buyerUserId != null && Number.isFinite(Number(buyerUserId))) {
+    storageKey = `u:${Number(buyerUserId)}`
+  } else {
+    const vk = visitorKey != null ? String(visitorKey).trim() : ''
+    if (!/^[a-zA-Z0-9_-]{8,64}$/.test(vk)) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'visitorKey bắt buộc (8–64 ký tự chữ, số, _ hoặc -) khi chưa đăng nhập buyer',
+        'INVALID_VISITOR_KEY',
+      )
+    }
+    storageKey = `a:${vk}`
+  }
+
+  const [, meta] = await sequelize.query(
+    `INSERT IGNORE INTO SellerShopVisits (seller_id, visit_date, visitor_key) VALUES (?, CURDATE(), ?)`,
+    { replacements: [sellerId, storageKey] },
+  )
+  const inserted = Number(meta?.affectedRows) === 1
+
+  if (inserted) {
+    try {
+      const stats = await getSellerTodayStats(sellerId)
+      emitSellerTodayStats(sellerId, stats)
+    } catch (e) {
+      console.error('[recordProductView] push stats:', e?.message || e)
+    }
+  }
+
+  return { recorded: true, newUniqueToday: inserted }
 }
 
 /**

@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser'
 import { errorConverter, errorHandler } from './middlewares/error.middleware'
 import { env } from './config'
 import { app, server } from './sockets'
+import { startOrderAutoCompleteScheduler } from './jobs/orderAutoComplete.job.js'
 import express from 'express'
 
 const port = env.PORT
@@ -23,7 +24,9 @@ app.use(cookieParser())
 // Serve static files (uploaded images)
 app.use('/uploads', express.static('uploads'))
 
-connectDB()
+connectDB().then(() => {
+  startOrderAutoCompleteScheduler()
+})
 
 // API Routes
 app.use('/api-v1', router)

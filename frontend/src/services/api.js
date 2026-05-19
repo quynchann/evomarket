@@ -85,6 +85,28 @@ export const sellerApi = {
       method: "DELETE",
     });
   },
+
+  listCoupons: async () => {
+    return await apiRequest("/seller/coupons", { method: "GET" });
+  },
+
+  createCoupon: async (payload) => {
+    return await apiRequest("/seller/coupons", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateCoupon: async (id, payload) => {
+    return await apiRequest(`/seller/coupons/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteCoupon: async (id) => {
+    return await apiRequest(`/seller/coupons/${id}`, { method: "DELETE" });
+  },
 };
 
 // ==================== TANSTACK QUERY KEYS ====================
@@ -95,6 +117,7 @@ export const queryKeys = {
   sellerCategories: ['seller', 'categories'],
   sellerProducts: ['seller', 'products'],
   sellerProduct: (id) => ['seller', 'products', id],
+  sellerCoupons: ['seller', 'coupons'],
 };
 
 // ==================== TANSTACK QUERY FUNCTIONS ====================

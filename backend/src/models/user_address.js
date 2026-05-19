@@ -9,6 +9,9 @@ module.exports = (sequelize, DataTypes) => {
   UserAddress.init(
     {
       user_id: DataTypes.INTEGER,
+      label: DataTypes.STRING(100),
+      recipient_fullname: DataTypes.STRING(100),
+      recipient_phone: DataTypes.STRING(20),
       address: DataTypes.STRING(200),
       city: DataTypes.STRING(50),
       state: DataTypes.STRING(50),

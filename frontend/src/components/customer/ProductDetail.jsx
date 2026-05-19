@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import * as productApi from "../../services/productApi";
-import { cartApi, cartQueryKeys } from "../../services/cartApi";
+import { reviewApi } from "../../services/reviewApi.js";
+import { cartApi, syncCartQueryAfterMutation } from "../../services/cartApi";
 import { useAuthStore } from "../../stores/useAuthStore";
 
 export default function ProductDetail() {
@@ -16,12 +17,55 @@ export default function ProductDetail() {
 
   const addToCartMutation = useMutation({
     mutationFn: (payload) => cartApi.addItem(payload),
-    onSuccess: (res) => {
-      queryClient.setQueryData(cartQueryKeys.cart, res.data);
+    onSuccess: (data) => {
+      syncCartQueryAfterMutation(queryClient, data);
       toast.success("Đã thêm vào giỏ hàng");
     },
     onError: (err) => {
       toast.error(err.message || "Không thể thêm vào giỏ hàng");
+    },
+  });
+
+  /** Mua ngay: chuẩn hóa 1 dòng giờ hàng đúng số lượng PDP rồi sang checkout chỉ cho dòng đó */
+  const buyNowMutation = useMutation({
+    mutationFn: async () => {
+      const productIdNum = Number(id);
+      const cartRes = await cartApi.getCart();
+      const currentItems = Array.isArray(cartRes?.data?.items)
+        ? cartRes.data.items
+        : [];
+      const existingLine = currentItems.find(
+        (line) =>
+          Number(line.productId) === productIdNum &&
+          (line.variantId == null || line.variantId === ""),
+      );
+      if (existingLine?.id != null) {
+        await cartApi.removeItem(existingLine.id);
+      }
+      return cartApi.addItem({
+        productId: productIdNum,
+        variantId: null,
+        quantity,
+      });
+    },
+    onSuccess: (fullResponse) => {
+      syncCartQueryAfterMutation(queryClient, fullResponse);
+      const inner = fullResponse?.data ?? fullResponse;
+      const itemsArr = Array.isArray(inner?.items) ? inner.items : [];
+      const productIdNum = Number(id);
+      const line = itemsArr.find(
+        (ci) =>
+          Number(ci.productId) === productIdNum &&
+          (ci.variantId == null || ci.variantId === ""),
+      );
+      if (!line?.id) {
+        toast.error("Không lấy được dòng đơn để thanh toán");
+        return;
+      }
+      navigate("/customer/checkout", { state: { lineIds: [line.id] } });
+    },
+    onError: (err) => {
+      toast.error(err.message || "Không thể thực hiện Mua ngay");
     },
   });
 
@@ -33,6 +77,35 @@ export default function ProductDetail() {
   });
 
   const product = data?.data;
+
+  const { data: reviewsPayload } = useQuery({
+    queryKey: ["product-reviews", id],
+    queryFn: async () => {
+      const res = await reviewApi.listByProduct(id, { page: 1, limit: 8 });
+      return res?.data ?? null;
+    },
+    enabled: Boolean(id && product?.id),
+  });
+
+  const publicReviews = reviewsPayload?.reviews ?? [];
+  const ratingSummary = product?.ratingSummary ?? { average: null, count: 0 };
+
+  useEffect(() => {
+    if (!id || !product?.id) return;
+    const run = async () => {
+      try {
+        const { accessToken, user: u } = useAuthStore.getState();
+        const isBuyer = u?.role === 'buyer' && Boolean(accessToken);
+        await productApi.trackProductView(id, {
+          accessToken: accessToken || undefined,
+          isBuyer,
+        });
+      } catch {
+        /* âm thầm — không làm phiền khách */
+      }
+    };
+    run();
+  }, [id, product?.id]);
 
   useEffect(() => {
     if (error) {
@@ -75,16 +148,17 @@ export default function ProductDetail() {
     });
   };
 
-  // Handle buy now (placeholder)
   const handleBuyNow = () => {
     if (!isAuthenticated) {
       toast.error("Vui lòng đăng nhập để mua hàng");
       navigate("/customer/login");
       return;
     }
-
-    // TODO: Implement buy now flow
-    toast.info("Chức năng đang phát triển");
+    if (user?.role !== "buyer") {
+      toast.error("Chỉ tài khoản người mua mới mua được hàng");
+      return;
+    }
+    buyNowMutation.mutate();
   };
 
   // Handle try on (UI only - chưa implement chức năng)
@@ -123,50 +197,7 @@ export default function ProductDetail() {
 
   return (
     <div className="min-h-screen bg-orange-50">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4 text-white shadow-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 transition hover:bg-white/20"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span className="font-medium">Quay lại</span>
-          </button>
-          <h1 className="text-xl font-bold">Chi tiết sản phẩm</h1>
-          {isAuthenticated && user?.role === "buyer" ? (
-            <Link
-              to="/customer/cart"
-              className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/20"
-            >
-              Giỏ hàng
-            </Link>
-          ) : (
-            <div className="w-16" />
-          )}
-        </div>
-      </header>
-
-      {/* Main Content */}
       <main className="mx-auto max-w-7xl p-6">
-        {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-2 text-sm text-gray-600">
-          <button onClick={() => navigate("/customer/homepage")} className="hover:text-orange-600">
-            Trang chủ
-          </button>
-          <span>/</span>
-          <button 
-            onClick={() => navigate(`/customer/categories/${product.category.id}`)}
-            className="hover:text-orange-600"
-          >
-            {product.category.name}
-          </button>
-          <span>/</span>
-          <span className="text-gray-900">{product.title}</span>
-        </nav>
-
         {/* Product Detail Grid */}
         <div className="grid gap-8 lg:grid-cols-2">
           {/* Left: Images */}
@@ -226,8 +257,12 @@ export default function ProductDetail() {
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-1">
                 <span className="text-yellow-500">⭐</span>
-                <span className="font-medium">4.5</span>
-                <span className="text-gray-500">(120 đánh giá)</span>
+                <span className="font-medium">
+                  {ratingSummary.average != null ? Number(ratingSummary.average).toFixed(1) : "—"}
+                </span>
+                <span className="text-gray-500">
+                  ({new Intl.NumberFormat("vi-VN").format(ratingSummary.count ?? 0)} đánh giá)
+                </span>
               </div>
               <span className="text-gray-400">|</span>
               <div className="text-gray-600">
@@ -320,35 +355,76 @@ export default function ProductDetail() {
             <div className="flex gap-4">
               <button
                 onClick={handleAddToCart}
-                disabled={!product.inStock || addToCartMutation.isPending}
+                disabled={
+                  !product.inStock ||
+                  addToCartMutation.isPending ||
+                  buyNowMutation.isPending
+                }
                 className="flex-1 rounded-lg border-2 border-orange-500 px-6 py-3 font-semibold text-orange-500 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-30"
               >
                 {addToCartMutation.isPending ? "Đang thêm..." : "🛒 Thêm vào giỏ"}
               </button>
               <button
                 onClick={handleBuyNow}
-                disabled={!product.inStock}
+                disabled={
+                  !product.inStock ||
+                  buyNowMutation.isPending ||
+                  addToCartMutation.isPending
+                }
                 className="flex-1 rounded-lg bg-orange-500 px-6 py-3 font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-30"
               >
-                Mua ngay
+                {buyNowMutation.isPending ? "Đang xử lý..." : "Mua ngay"}
               </button>
             </div>
 
             {/* Seller Info */}
             <div className="rounded-xl border-2 border-gray-200 bg-white p-6">
               <h3 className="mb-3 font-semibold text-gray-900">Thông tin người bán</h3>
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(`/customer/shops/${product.seller.id}`)
+                }
+                className="flex w-full cursor-pointer items-center gap-4 rounded-lg text-left outline-none ring-orange-400 transition hover:bg-orange-50/80 focus-visible:ring-2"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-100">
                   <span className="text-2xl">👤</span>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">{product.seller.fullname}</p>
-                  <p className="text-sm text-gray-500">Người bán</p>
+                  <p className="font-semibold text-gray-900">
+                    {product.seller.shopName || product.seller.fullname}
+                  </p>
+                  <p className="text-sm text-gray-500">Cửa hàng — xem trang shop</p>
                 </div>
-              </div>
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Đánh giá khách hàng */}
+        {publicReviews.length > 0 && (
+          <div className="mt-8 rounded-xl bg-white p-6 shadow-lg">
+            <h2 className="mb-4 text-xl font-bold text-gray-900">Đánh giá từ khách hàng</h2>
+            <ul className="divide-y divide-gray-100">
+              {publicReviews.map((r) => (
+                <li key={r.id} className="py-4 first:pt-0">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <span className="font-medium text-gray-900">
+                      {r.user?.fullname?.trim() || "Khách hàng"}
+                    </span>
+                    <span className="text-amber-500">{"★".repeat(Math.min(5, Math.max(0, r.rating || 0)))}</span>
+                  </div>
+                  {r.comment && <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{r.comment}</p>}
+                  {r.created_at && (
+                    <p className="mt-1 text-xs text-gray-400">
+                      {new Date(r.created_at).toLocaleString("vi-VN")}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Product Description */}
         <div className="mt-8 rounded-xl bg-white p-8 shadow-lg">

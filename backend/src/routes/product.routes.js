@@ -1,5 +1,6 @@
 import express from 'express'
 import * as productController from '../controllers/product.controller.js'
+import { optionalAuthMiddleware } from '../middlewares/auth.middleware.js'
 
 const router = express.Router()
 
@@ -13,6 +14,8 @@ const router = express.Router()
 router.get('/featured', productController.getFeaturedProducts)
 router.get('/search', productController.searchProducts)
 router.get('/', productController.getProducts)
+router.post('/:id/view', optionalAuthMiddleware, productController.trackProductView)
+router.get('/:id/reviews', productController.getProductReviews)
 router.get('/:id', productController.getProductDetail)
 
 export default router

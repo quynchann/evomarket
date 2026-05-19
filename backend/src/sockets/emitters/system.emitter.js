@@ -7,6 +7,28 @@ import { io } from '../index.js';
 import { NAMESPACES, SYSTEM_EVENTS, ROOMS } from '../socket.constants.js';
 
 /**
+ * Cập nhật nhanh thống kê “hôm nay” lên dashboard seller (qua /system).
+ */
+export const emitSellerTodayStats = (sellerId, stats) => {
+  try {
+    const sid = Number(sellerId);
+    if (!Number.isFinite(sid)) return;
+    const systemNs = io.of(NAMESPACES.SYSTEM);
+    const roomName = ROOMS.SYSTEM.PERSONAL(sid);
+    systemNs.to(roomName).emit(SYSTEM_EVENTS.SELLER_TODAY_STATS, {
+      revenueVnd: stats.revenueVnd,
+      ordersToday: stats.ordersToday,
+      visitorsToday: stats.visitorsToday,
+      followerCount: stats.followerCount,
+      ratingSummary: stats.ratingSummary ?? { average: null, count: 0 },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[Emitter] emitSellerTodayStats:', error);
+  }
+};
+
+/**
  * Get system namespace instance
  * @returns {import('socket.io').Namespace}
  */
@@ -134,5 +156,29 @@ export const emitNotificationToUsers = (userIds, notification) => {
     console.log(`[Emitter] Notification sent to ${userIds.length} users:`, notification.type);
   } catch (error) {
     console.error('[Emitter] Error sending notification to multiple users:', error);
+  }
+};
+
+/**
+ * Thông báo realtime cho người mua khi trạng thái đơn đổi (seller cập nhật).
+ * @param {number|string} buyerUserId - user_id chủ đơn
+ * @param {{ orderId: number, status: string, title?: string, message?: string }} payload
+ */
+export const emitOrderStatusUpdatedToBuyer = (buyerUserId, payload) => {
+  try {
+    const systemNs = getSystemNamespace();
+    const roomName = ROOMS.SYSTEM.PERSONAL(buyerUserId);
+    systemNs.to(roomName).emit(SYSTEM_EVENTS.ORDER_STATUS_UPDATED, {
+      orderId: payload.orderId,
+      status: payload.status,
+      title: payload.title,
+      message: payload.message,
+      timestamp: new Date().toISOString(),
+    });
+    console.log(
+      `[Emitter] Order ${payload.orderId} status → ${payload.status} → buyer ${buyerUserId}`,
+    );
+  } catch (error) {
+    console.error('[Emitter] Error emitting order status to buyer:', error);
   }
 };

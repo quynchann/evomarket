@@ -29,10 +29,14 @@ export const SYSTEM_EVENTS = {
   ROOM_JOIN: 'room:join',
 
   // Server -> Client
+  PRESENCE_SYNC: 'presence:sync',
   PRESENCE_ONLINE: 'presence:online',
   PRESENCE_OFFLINE: 'presence:offline',
   NOTIFICATION_NEW: 'notification:new',
-  NOTIFICATION_UNREAD_UPDATE: 'notification:unread_update'
+  NOTIFICATION_UNREAD_UPDATE: 'notification:unread_update',
+  ORDER_STATUS_UPDATED: 'order:status_updated',
+  /** Server → seller: thống kê dashboard hôm nay */
+  SELLER_TODAY_STATS: 'seller:today_stats',
 }
 
 // Event Names - Namespace: /chat

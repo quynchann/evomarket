@@ -11,10 +11,12 @@ export const authorizeRoles = (roles = []) => {
 
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
-      throw new ApiError(
-        StatusCodes.FORBIDDEN,
-        'Permission denied',
-        'FORBIDDEN'
+      return next(
+        new ApiError(
+          StatusCodes.FORBIDDEN,
+          'Permission denied',
+          'FORBIDDEN'
+        )
       )
     }
     next()

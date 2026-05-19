@@ -31,7 +31,7 @@ export const setupChatNamespace = (chatNamespace) => {
       }
 
       try {
-        await chatService.assertConversationMember(cid, user.id)
+        await chatService.assertConversationMember(cid, user.id, user.role)
 
         const roomName = ROOMS.CHAT.CONVERSATION(cid)
         socket.join(roomName)
@@ -81,7 +81,8 @@ export const setupChatNamespace = (chatNamespace) => {
         const savedMessage = await chatService.sendMessage(
           cid,
           user.id,
-          String(content).trim()
+          String(content).trim(),
+          { userRole: user.role }
         )
 
         const payload = chatService.messageToSocketPayload(savedMessage, {
@@ -148,9 +149,14 @@ export const setupChatNamespace = (chatNamespace) => {
 
         try {
           if (messageId != null && messageId !== '') {
-            await chatService.markOneMessageRead(cid, user.id, messageId)
+            await chatService.markOneMessageRead(
+              cid,
+              user.id,
+              messageId,
+              user.role
+            )
           } else {
-            await chatService.markMessagesAsRead(cid, user.id)
+            await chatService.markMessagesAsRead(cid, user.id, user.role)
           }
 
           const roomName = ROOMS.CHAT.CONVERSATION(cid)

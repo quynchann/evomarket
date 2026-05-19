@@ -1,4 +1,4 @@
-import { apiRequest } from './apiRequest.js';
+import { apiRequest, API_BASE_URL } from './apiRequest.js';
 
 /**
  * Authentication APIs
@@ -53,6 +53,58 @@ export const authApi = {
     return await apiRequest("/auth/me", {
       method: "GET",
     });
+  },
+
+  /**
+   * Cập nhật thông tin cá nhân (fullname, phone_number, birthday, gender)
+   */
+  updateProfile: async ({ fullname, phone_number, birthday, gender, shop_name }) => {
+    return await apiRequest("/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify({ fullname, phone_number, birthday, gender, shop_name }),
+    });
+  },
+
+  /**
+   * Đổi mật khẩu (cần mật khẩu hiện tại)
+   */
+  changePassword: async ({ current_password, new_password }) => {
+    return await apiRequest("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ current_password, new_password }),
+    });
+  },
+
+  /**
+   * Upload avatar (multipart). Cập nhật user.avatar trên server và trả về user mới.
+   */
+  uploadAvatar: async (file) => {
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    const authStore = await import("../stores/useAuthStore.js");
+    const { accessToken } = authStore.useAuthStore.getState();
+
+    const response = await fetch(`${API_BASE_URL}/upload/avatar`, {
+      method: "POST",
+      headers: {
+        Authorization: accessToken ? `Bearer ${accessToken}` : "",
+      },
+      credentials: "include",
+      body: formData,
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw {
+        message: data.error?.message || data.message || "Upload avatar thất bại",
+        code: data.error?.code,
+        status: response.status,
+      };
+    }
+
+    return data;
   },
 
   /**

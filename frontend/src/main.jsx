@@ -1,7 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./queryClient.js";
 import { Toaster } from "sonner";
 import "./index.css";
 import "@/stores/useSystemSocketStore.js";
@@ -11,30 +12,37 @@ import { ProtectedRoute } from "./routes/ProtectedRoute.jsx";
 
 // Admin imports
 import AdminLogin from "./components/admin/auth/Login.jsx";
-import Dashboard from "./components/admin/Dashboard.jsx";
-import UserManagement from "./components/admin/UserManagement.jsx";
-import ProductManager from "./components/admin/ProductManagement.jsx";
-import AdminNotification from "./components/admin/Notification.jsx";
-import Sale from "./components/admin/Sale.jsx";
-import ReviewManagement from "./components/admin/ReviewManagement.jsx";
-import Analysis from "./components/admin/Analysis.jsx";
-import Setting from "./components/admin/Setting.jsx";
+import AdminLayout from "./components/admin/AdminLayout.jsx";
+import AdminOverview from "./components/admin/AdminOverview.jsx";
+import AdminOrdersPage from "./components/admin/AdminOrdersPage.jsx";
+import AdminUsersPage from "./components/admin/AdminUsersPage.jsx";
+import AdminProductsPage from "./components/admin/AdminProductsPage.jsx";
+import AdminReviewsPage from "./components/admin/AdminReviewsPage.jsx";
+import AdminCouponsPage from "./components/admin/AdminCouponsPage.jsx";
+import AdminNotifyPage from "./components/admin/AdminNotifyPage.jsx";
+import AdminChatPage from "./components/admin/AdminChatPage.jsx";
 
 // Customer imports
 import { CustomerLogin } from "./components/customer/auth/Login.jsx";
 import { CustomerRegister } from "./components/customer/auth/Register.jsx";
 import { CustomerLayout } from "./components/customer/layout/CustomerLayout.jsx";
 import Homepage from "./components/customer/Home.jsx";
+import CategoryProducts from "./components/customer/CategoryProducts.jsx";
 import ProductDetail from "./components/customer/ProductDetail.jsx";
+import ShopProfile from "./components/customer/ShopProfile.jsx";
 import Profile from "./components/customer/Profile.jsx";
 import ChatPage from "./components/customer/ChatPage.jsx";
 import CustomerAddress from "./components/customer/CustomerAddress.jsx";
 import NotificationSettings from "./components/customer/NotificationSettings.jsx";
+import SystemNotifications from "./components/customer/SystemNotifications.jsx";
 import PrivacySettings from "./components/customer/PrivacySettings.jsx";
 import PersonalInfo from "./components/customer/PersonalInfo.jsx";
 import Cart from "./components/customer/Cart.jsx";
 import Checkout from "./components/customer/Checkout.jsx";
 import OrderSuccess from "./components/customer/OrderSuccess.jsx";
+import BuyerOrders from "./components/customer/BuyerOrders.jsx";
+import BuyerOrderDetail from "./components/customer/BuyerOrderDetail.jsx";
+import PaymentWallet from "./components/customer/PaymentWallet.jsx";
 
 // Seller imports
 import { SellerLogin } from "./components/seller/auth/Login.jsx";
@@ -44,8 +52,13 @@ import Home from "./components/seller/Home.jsx";
 import ProductManagement from "./components/seller/ProductManagement.jsx";
 import OrdersManager from "./components/seller/OrdersManager.jsx";
 import SellerChatPage from "./components/seller/ChatPage.jsx";
-
-const queryClient = new QueryClient();
+import SellerProfile from "./components/seller/SellerProfile.jsx";
+import SellerSettings from "./components/seller/SellerSettings.jsx";
+import SellerCouponManagement from "./components/seller/SellerCouponManagement.jsx";
+import SellerNotifications from "./components/seller/SellerNotifications.jsx";
+import SellerReports from "./components/seller/SellerReports.jsx";
+import SellerSupport from "./components/seller/SellerSupport.jsx";
+import CustomerSupport from "./components/customer/CustomerSupport.jsx";
 
 const router = createBrowserRouter([
   {
@@ -64,24 +77,41 @@ const router = createBrowserRouter([
         element: <CustomerLayout />,
         children: [
           { path: "customer/homepage", Component: Homepage },
+          {
+            path: "customer/categories/:categoryId",
+            Component: CategoryProducts,
+          },
           { path: "customer/products/:id", Component: ProductDetail },
+          { path: "customer/shops/:sellerId", Component: ShopProfile },
         ],
       },
 
-      // Admin protected routes
+      // Admin: /admin/* — layout chung; chat chỉ đổi khung, giữ ChatShell
       {
+        path: "admin",
         element: (
           <ProtectedRoute allowedRoles={["admin"]} redirectTo="/admin/login" />
         ),
         children: [
-          { path: "admin/dashboard", Component: Dashboard },
-          { path: "admin/user-management", Component: UserManagement },
-          { path: "admin/product-management", Component: ProductManager },
-          { path: "admin/notification", Component: AdminNotification },
-          { path: "admin/sale", Component: Sale },
-          { path: "admin/review", Component: ReviewManagement },
-          { path: "admin/analysis", Component: Analysis },
-          { path: "admin/setting", Component: Setting },
+          {
+            element: <AdminLayout />,
+            children: [
+              { index: true, element: <Navigate to="dashboard" replace /> },
+              { path: "dashboard", Component: AdminOverview },
+              { path: "orders", Component: AdminOrdersPage },
+              { path: "user-management", Component: AdminUsersPage },
+              { path: "product-management", Component: AdminProductsPage },
+              { path: "review", Component: AdminReviewsPage },
+              { path: "sale", Component: AdminCouponsPage },
+              { path: "notification", Component: AdminNotifyPage },
+              {
+                path: "analysis",
+                element: <Navigate to="/admin/dashboard" replace />,
+              },
+              { path: "chat/:conversationId", Component: AdminChatPage },
+              { path: "chat", Component: AdminChatPage },
+            ],
+          },
         ],
       },
 
@@ -100,13 +130,21 @@ const router = createBrowserRouter([
               { path: "customer/profile", Component: Profile },
               { path: "customer/chat/:conversationId", Component: ChatPage },
               { path: "customer/chat", Component: ChatPage },
+              { path: "customer/bank", Component: PaymentWallet },
               { path: "customer/address", Component: CustomerAddress },
-              { path: "customer/notifications", Component: NotificationSettings },
+              { path: "customer/notifications", Component: SystemNotifications },
+              {
+                path: "customer/notification-settings",
+                Component: NotificationSettings,
+              },
               { path: "customer/privacy-settings", Component: PrivacySettings },
               { path: "customer/personal-info", Component: PersonalInfo },
               { path: "customer/cart", Component: Cart },
               { path: "customer/checkout", Component: Checkout },
               { path: "customer/order-success/:orderId", Component: OrderSuccess },
+              { path: "customer/orders", Component: BuyerOrders },
+              { path: "customer/orders/:orderId", Component: BuyerOrderDetail },
+              { path: "customer/support", Component: CustomerSupport },
             ],
           },
         ],
@@ -126,9 +164,15 @@ const router = createBrowserRouter([
             children: [
               { path: "seller/home", Component: Home },
               { path: "seller/products", Component: ProductManagement },
+              { path: "seller/coupons", Component: SellerCouponManagement },
               { path: "seller/orders", Component: OrdersManager },
               { path: "seller/chat/:conversationId", Component: SellerChatPage },
               { path: "seller/chat", Component: SellerChatPage },
+              { path: "seller/profile", Component: SellerProfile },
+              { path: "seller/settings", Component: SellerSettings },
+              { path: "seller/notifications", Component: SellerNotifications },
+              { path: "seller/reports", Component: SellerReports },
+              { path: "seller/support", Component: SellerSupport },
             ],
           },
         ],

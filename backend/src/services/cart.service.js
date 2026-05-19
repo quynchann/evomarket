@@ -19,6 +19,10 @@ const mapCartRowToDto = (cartRow, product, variant) => {
   const qty = Number(cartRow.quantity) || 0
   const maxQty = getMaxAvailable(product, variant)
   const seller = product.Seller || {}
+  const sellerName = (() => {
+    const sn = seller.shop_name != null ? String(seller.shop_name).trim() : ''
+    return sn || seller.fullname || 'Seller'
+  })()
   return {
     id: cartRow.id,
     productId: product.id,
@@ -31,7 +35,8 @@ const mapCartRowToDto = (cartRow, product, variant) => {
     maxQuantity: maxQty,
     seller: {
       id: seller.id,
-      fullname: seller.fullname || 'Seller'
+      fullname: seller.fullname || 'Seller',
+      shopName: sellerName,
     },
     variantLabel: variant
       ? [variant.size, variant.color].filter(Boolean).join(' · ') || null
@@ -48,7 +53,7 @@ export const getCartForUser = async (userId) => {
     include: [
       {
         model: Product,
-        include: [{ model: User, as: 'Seller', attributes: ['id', 'fullname'] }]
+        include: [{ model: User, as: 'Seller', attributes: ['id', 'fullname', 'shop_name'] }]
       },
       { model: ProductVariant, required: false }
     ],
@@ -125,7 +130,7 @@ export const addOrUpdateItem = async (userId, { productId, variantId, quantity }
 
   const product = await Product.findOne({
     where: { id: productId, deleted: false },
-    include: [{ model: User, as: 'Seller', attributes: ['id', 'fullname'] }]
+    include: [{ model: User, as: 'Seller', attributes: ['id', 'fullname', 'shop_name'] }]
   })
 
   if (!product) {
@@ -185,7 +190,7 @@ export const updateLineQuantity = async (userId, cartItemId, quantity) => {
   const row = await Cart.findOne({
     where: { id: cartItemId, userId },
     include: [
-      { model: Product, include: [{ model: User, as: 'Seller', attributes: ['id', 'fullname'] }] },
+      { model: Product, include: [{ model: User, as: 'Seller', attributes: ['id', 'fullname', 'shop_name'] }] },
       { model: ProductVariant, required: false }
     ]
   })

@@ -16,6 +16,10 @@ const router = express.Router()
 router.post('/', authorizeRoles('buyer'), orderController.createOrder)
 router.get('/', authorizeRoles('buyer'), orderController.getBuyerOrders)
 
+router.post('/:id/confirm-delivery', authorizeRoles('buyer'), orderController.buyerConfirmReceived)
+router.post('/:id/request-return', authorizeRoles('buyer'), orderController.buyerRequestReturn)
+router.post('/:id/cancel', authorizeRoles('buyer'), orderController.buyerCancelOrder)
+
 // Order detail - Buyer có thể xem đơn của mình, Admin có thể xem tất cả
 router.get('/:id', orderController.getOrderDetail)
 

@@ -1,11 +1,45 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { toast } from "sonner";
 import { useAuthStore } from "../../stores/useAuthStore";
-import { User, Package, CreditCard, Heart, Settings, Bell, Camera, X } from "lucide-react";
+import { authApi } from "../../services/authApi.js";
+import { resolveAvatarUrl } from "../../utils/chatUi.js";
+import {
+  User,
+  Package,
+  CreditCard,
+  Heart,
+  Settings,
+  Bell,
+  Camera,
+  X,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+
+function birthdayToInputValue(v) {
+  if (v == null || v === "") return "";
+  const s = String(v);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  return "";
+}
+
+function formatBirthdayDisplay(v) {
+  const inp = birthdayToInputValue(v);
+  if (!inp) return "—";
+  const [y, m, d] = inp.split("-").map(Number);
+  if (!y || !m || !d) return "—";
+  try {
+    return new Date(y, m - 1, d).toLocaleDateString("vi-VN");
+  } catch {
+    return "—";
+  }
+}
 
 export default function ProfilePage() {
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState("info");
   const [isEditing, setIsEditing] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [selectedAvatarFile, setSelectedAvatarFile] = useState(null);
@@ -15,11 +49,40 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     fullname: user?.fullname || "",
     email: user?.email || "",
-    phone: "0901234567",
-    birthday: "01/01/1990",
-    gender: "Nam",
+    phone: user?.phone_number ?? "",
+    birthday: birthdayToInputValue(user?.birthday),
+    gender: user?.gender ?? "",
     avatar: user?.avatar || null,
   });
+
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [pwdForm, setPwdForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showPwd, setShowPwd] = useState({
+    cur: false,
+    neu: false,
+    conf: false,
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    setFormData((prev) => ({
+      ...prev,
+      fullname: user.fullname ?? "",
+      email: user.email ?? "",
+      phone: user.phone_number ?? "",
+      birthday: birthdayToInputValue(user.birthday),
+      gender: user.gender ?? "",
+      avatar: user.avatar ?? null,
+    }));
+  }, [user]);
+
+  const avatarDisplayUrl = resolveAvatarUrl(formData.avatar);
 
   const tabs = [
     { id: "info", label: "Thông tin cá nhân", icon: User },
@@ -75,9 +138,29 @@ export default function ProfilePage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    // TODO: Call API to update user info
-    setIsEditing(false);
+  const handleSave = async () => {
+    const name = formData.fullname.trim();
+    if (!name) {
+      toast.error("Vui lòng nhập họ và tên");
+      return;
+    }
+    try {
+      setProfileSaving(true);
+      const res = await authApi.updateProfile({
+        fullname: name,
+        phone_number: formData.phone.trim() || null,
+        birthday: formData.birthday.trim() || null,
+        gender: formData.gender.trim() || null,
+      });
+      const updated = res.data?.user;
+      if (updated) setUser(updated);
+      toast.success("Đã cập nhật thông tin cá nhân");
+      setIsEditing(false);
+    } catch (err) {
+      toast.error(err?.message || "Không thể lưu thông tin");
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   const handleAvatarClick = () => {
@@ -112,20 +195,25 @@ export default function ProfilePage() {
     if (!selectedAvatarFile) return;
 
     try {
-      // TODO: Upload avatar to backend
-      // const formData = new FormData();
-      // formData.append('avatar', selectedAvatarFile);
-      // await api.uploadAvatar(formData);
-      
-      // Temporarily update local state
-      setFormData((prev) => ({ ...prev, avatar: avatarPreview }));
+      setAvatarUploading(true);
+      const res = await authApi.uploadAvatar(selectedAvatarFile);
+      const updated = res.data?.user;
+      if (updated) {
+        setUser(updated);
+        setFormData((prev) => ({ ...prev, avatar: updated.avatar ?? null }));
+      }
       setShowAvatarModal(false);
       setAvatarPreview(null);
       setSelectedAvatarFile(null);
-      alert("Cập nhật avatar thành công!");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      toast.success("Cập nhật avatar thành công!");
     } catch (error) {
       console.error("Upload avatar failed:", error);
-      alert("Có lỗi xảy ra khi cập nhật avatar");
+      toast.error(
+        error?.message || "Có lỗi xảy ra khi cập nhật avatar"
+      );
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -135,6 +223,52 @@ export default function ProfilePage() {
     setSelectedAvatarFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const closePasswordModal = () => {
+    setShowPasswordModal(false);
+    setPwdForm({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+    setShowPwd({ cur: false, neu: false, conf: false });
+  };
+
+  const handlePasswordFieldChange = (e) => {
+    const { name, value } = e.target;
+    setPwdForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleChangePasswordSubmit = async () => {
+    const { currentPassword, newPassword, confirmPassword } = pwdForm;
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error("Vui lòng nhập đủ các trường");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("Mật khẩu mới phải có ít nhất 8 ký tự");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Xác nhận mật khẩu không khớp");
+      return;
+    }
+    try {
+      setPasswordSaving(true);
+      const res = await authApi.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      toast.success(
+        res?.data?.message || "Đổi mật khẩu thành công"
+      );
+      closePasswordModal();
+    } catch (err) {
+      toast.error(err?.message || "Không thể đổi mật khẩu");
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -150,9 +284,9 @@ export default function ProfilePage() {
               <div className="flex items-center gap-6">
                 <div className="relative group">
                   <div className="h-32 w-32 rounded-full border-4 border-orange-100 bg-gradient-to-br from-orange-100 to-red-100 overflow-hidden shadow-lg">
-                    {formData.avatar ? (
+                    {avatarDisplayUrl ? (
                       <img 
-                        src={formData.avatar} 
+                        src={avatarDisplayUrl} 
                         alt="Avatar" 
                         className="h-full w-full object-cover"
                       />
@@ -210,16 +344,35 @@ export default function ProfilePage() {
                 ) : (
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setIsEditing(false)}
-                      className="rounded-lg border-2 border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                      type="button"
+                      onClick={() => {
+                        if (!user) {
+                          setIsEditing(false);
+                          return;
+                        }
+                        setFormData((prev) => ({
+                          ...prev,
+                          fullname: user.fullname ?? "",
+                          email: user.email ?? "",
+                          phone: user.phone_number ?? "",
+                          birthday: birthdayToInputValue(user.birthday),
+                          gender: user.gender ?? "",
+                          avatar: user.avatar ?? null,
+                        }));
+                        setIsEditing(false);
+                      }}
+                      disabled={profileSaving}
+                      className="rounded-lg border-2 border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
                     >
                       Hủy
                     </button>
                     <button
+                      type="button"
                       onClick={handleSave}
-                      className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-600"
+                      disabled={profileSaving}
+                      className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-600 disabled:opacity-60"
                     >
-                      Lưu
+                      {profileSaving ? "Đang lưu…" : "Lưu"}
                     </button>
                   </div>
                 )}
@@ -265,11 +418,13 @@ export default function ProfilePage() {
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
+                      placeholder="Ví dụ: 0901234567"
+                      autoComplete="tel"
                       className="w-full rounded-lg border-2 border-gray-300 px-4 py-2 outline-none transition focus:border-orange-500"
                     />
                   ) : (
                     <p className="rounded-lg bg-gray-50 px-4 py-2 text-gray-800">
-                      {formData.phone}
+                      {formData.phone.trim() ? formData.phone : "—"}
                     </p>
                   )}
                 </div>
@@ -280,16 +435,15 @@ export default function ProfilePage() {
                   </label>
                   {isEditing ? (
                     <input
-                      type="text"
+                      type="date"
                       name="birthday"
                       value={formData.birthday}
                       onChange={handleInputChange}
-                      placeholder="DD/MM/YYYY"
                       className="w-full rounded-lg border-2 border-gray-300 px-4 py-2 outline-none transition focus:border-orange-500"
                     />
                   ) : (
                     <p className="rounded-lg bg-gray-50 px-4 py-2 text-gray-800">
-                      {formData.birthday}
+                      {formatBirthdayDisplay(formData.birthday)}
                     </p>
                   )}
                 </div>
@@ -305,13 +459,14 @@ export default function ProfilePage() {
                       onChange={handleInputChange}
                       className="w-full rounded-lg border-2 border-gray-300 px-4 py-2 outline-none transition focus:border-orange-500"
                     >
+                      <option value="">Chưa chọn</option>
                       <option value="Nam">Nam</option>
                       <option value="Nữ">Nữ</option>
                       <option value="Khác">Khác</option>
                     </select>
                   ) : (
                     <p className="rounded-lg bg-gray-50 px-4 py-2 text-gray-800">
-                      {formData.gender}
+                      {formData.gender?.trim() ? formData.gender : "—"}
                     </p>
                   )}
                 </div>
@@ -322,7 +477,11 @@ export default function ProfilePage() {
             <div className="rounded-2xl bg-white p-6 shadow-md">
               <h3 className="mb-4 text-lg font-semibold text-gray-800">Bảo mật tài khoản</h3>
               <div className="space-y-3">
-                <button className="flex w-full items-center justify-between rounded-lg border-2 border-gray-200 p-4 transition hover:border-orange-300 hover:bg-orange-50">
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(true)}
+                  className="flex w-full items-center justify-between rounded-lg border-2 border-gray-200 p-4 transition hover:border-orange-300 hover:bg-orange-50"
+                >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 text-orange-600">
                       🔑
@@ -335,21 +494,6 @@ export default function ProfilePage() {
                   <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </button>
-
-                <button className="flex w-full items-center justify-between rounded-lg border-2 border-gray-200 p-4 transition hover:border-orange-300 hover:bg-orange-50">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">
-                      🔐
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium text-gray-800">Xác thực 2 bước</p>
-                      <p className="text-sm text-gray-500">Bảo mật nâng cao cho tài khoản</p>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
-                    Đã bật
-                  </span>
                 </button>
               </div>
             </div>
@@ -724,9 +868,152 @@ export default function ProfilePage() {
               </button>
               <button
                 onClick={handleSaveAvatar}
-                className="flex-1 rounded-lg bg-orange-500 px-4 py-2.5 font-medium text-white transition hover:bg-orange-600"
+                disabled={avatarUploading}
+                className="flex-1 rounded-lg bg-orange-500 px-4 py-2.5 font-medium text-white transition hover:bg-orange-600 disabled:opacity-60"
               >
-                Lưu ảnh
+                {avatarUploading ? "Đang tải lên…" : "Lưu ảnh"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Đổi mật khẩu */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Đổi mật khẩu
+              </h3>
+              <button
+                type="button"
+                onClick={closePasswordModal}
+                disabled={passwordSaving}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 disabled:opacity-50"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Mật khẩu hiện tại
+                </label>
+                <div className="relative">
+                  <input
+                    name="currentPassword"
+                    type={showPwd.cur ? "text" : "password"}
+                    value={pwdForm.currentPassword}
+                    onChange={handlePasswordFieldChange}
+                    autoComplete="current-password"
+                    className="w-full rounded-lg border-2 border-gray-300 py-2 pl-3 pr-10 outline-none transition focus:border-orange-500"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() =>
+                      setShowPwd((s) => ({ ...s, cur: !s.cur }))
+                    }
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-500 hover:bg-gray-100"
+                    aria-label={showPwd.cur ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  >
+                    {showPwd.cur ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Mật khẩu mới
+                </label>
+                <div className="relative">
+                  <input
+                    name="newPassword"
+                    type={showPwd.neu ? "text" : "password"}
+                    value={pwdForm.newPassword}
+                    onChange={handlePasswordFieldChange}
+                    autoComplete="new-password"
+                    className="w-full rounded-lg border-2 border-gray-300 py-2 pl-3 pr-10 outline-none transition focus:border-orange-500"
+                    placeholder="Tối thiểu 8 ký tự"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() =>
+                      setShowPwd((s) => ({ ...s, neu: !s.neu }))
+                    }
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-500 hover:bg-gray-100"
+                    aria-label={showPwd.neu ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  >
+                    {showPwd.neu ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Xác nhận mật khẩu mới
+                </label>
+                <div className="relative">
+                  <input
+                    name="confirmPassword"
+                    type={showPwd.conf ? "text" : "password"}
+                    value={pwdForm.confirmPassword}
+                    onChange={handlePasswordFieldChange}
+                    autoComplete="new-password"
+                    className="w-full rounded-lg border-2 border-gray-300 py-2 pl-3 pr-10 outline-none transition focus:border-orange-500"
+                    placeholder="Nhập lại mật khẩu mới"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() =>
+                      setShowPwd((s) => ({ ...s, conf: !s.conf }))
+                    }
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-500 hover:bg-gray-100"
+                    aria-label={showPwd.conf ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  >
+                    {showPwd.conf ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-4 text-xs text-gray-500">
+              Sau khi đổi mật khẩu, các phiên đăng nhập khác sẽ cần đăng nhập lại khi hết hạn phiên hiện tại.
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={closePasswordModal}
+                disabled={passwordSaving}
+                className="flex-1 rounded-lg border-2 border-gray-300 px-4 py-2.5 font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleChangePasswordSubmit}
+                disabled={passwordSaving}
+                className="flex-1 rounded-lg bg-orange-500 px-4 py-2.5 font-medium text-white transition hover:bg-orange-600 disabled:opacity-60"
+              >
+                {passwordSaving ? "Đang cập nhật…" : "Xác nhận"}
               </button>
             </div>
           </div>

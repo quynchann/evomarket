@@ -10,6 +10,7 @@
     "build": "npm run clean && npm run build-babel",
     "production": "npm run build && node ./build/src/server.js",
     "dev": "nodemon --exec ./node_modules/.bin/babel-node ./src/server.js",
+    "postinstall": "patch-package",
     "db:reset": "npx sequelize-cli db:drop && npx sequelize-cli db:create && npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all",
     "seed": "npx sequelize-cli db:seed:all"
   },
@@ -28,7 +29,8 @@
     "mysql2": "^3.15.3",
     "sequelize": "^6.37.7",
     "sequelize-cursor-pagination": "^3.5.1",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "vnpay": "^2.5.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.28.3",
@@ -38,6 +40,7 @@
     "@babel/preset-env": "^7.28.5",
     "babel-plugin-module-resolver": "^5.0.3",
     "nodemon": "^3.1.11",
+    "patch-package": "^8.0.1",
     "prettier": "^3.8.3",
     "sequelize-cli": "^6.6.3"
   }

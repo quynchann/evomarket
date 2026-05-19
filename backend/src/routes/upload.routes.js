@@ -1,5 +1,6 @@
 import express from 'express'
 import multer from 'multer'
+import fs from 'fs'
 import * as uploadController from '../controllers/upload.controller.js'
 import { authorizeRoles } from '@/middlewares/role.middleware.js'
 import path from 'path'
@@ -33,6 +34,27 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }
 })
 
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = 'uploads/avatars'
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true })
+    }
+    cb(null, dir)
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9)
+    const ext = path.extname(file.originalname)
+    cb(null, 'avatar-' + uniqueSuffix + ext)
+  }
+})
+
+const uploadAvatarMw = multer({
+  storage: avatarStorage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }
+})
+
 /**
  * Upload Routes
  * Base path: /api-v1/upload
@@ -45,6 +67,12 @@ router.post(
   authorizeRoles('seller'),
   upload.single('image'),
   uploadController.uploadProductImage
+)
+
+router.post(
+  '/avatar',
+  uploadAvatarMw.single('avatar'),
+  uploadController.uploadAvatar
 )
 
 export default router

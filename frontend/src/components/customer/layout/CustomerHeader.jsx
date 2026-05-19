@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../stores/useAuthStore";
+import { resolveAvatarUrl } from "../../../utils/chatUi.js";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ShoppingCart, Bell } from "lucide-react";
 
 export function CustomerHeader({ cartCount = 0 }) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const headerAvatarUrl = resolveAvatarUrl(user?.avatar);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -77,11 +79,17 @@ export function CustomerHeader({ cartCount = 0 }) {
               <span className="hidden font-medium text-sm lg:inline-block">
                 {user?.fullname || "Người dùng"}
               </span>
-              <img
-                src="https://cdn-icons-png.flaticon.com/512/3177/3177440.png"
-                alt="avatar"
-                className="h-8 w-8 rounded-full border-2 border-white shadow-md"
-              />
+              {headerAvatarUrl ? (
+                <img
+                  src={headerAvatarUrl}
+                  alt=""
+                  className="h-8 w-8 rounded-full border-2 border-white object-cover shadow-md"
+                />
+              ) : (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-white/30 text-sm font-bold shadow-md">
+                  {user?.fullname?.charAt(0)?.toUpperCase() || "U"}
+                </span>
+              )}
             </button>
 
             {isDropdownOpen && (
@@ -117,20 +125,6 @@ export function CustomerHeader({ cartCount = 0 }) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                   </svg>
                   <span>Đơn hàng của tôi</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsDropdownOpen(false);
-                    navigate("/customer/settings");
-                  }}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-orange-50"
-                >
-                  <svg className="h-5 w-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span>Cài đặt</span>
                 </button>
 
                 <div className="my-2 h-px bg-gray-100"></div>

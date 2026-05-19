@@ -5,6 +5,8 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       Coupon.hasMany(models.UserPayment, { foreignKey: "coupon_id" });
       Coupon.hasMany(models.Payment, { foreignKey: "coupons_id" });
+      Coupon.hasMany(models.CouponRedemption, { foreignKey: "coupon_id" });
+      Coupon.hasMany(models.Order, { foreignKey: "coupon_id" });
     }
   }
   Coupon.init(
@@ -23,6 +25,15 @@ module.exports = (sequelize, DataTypes) => {
       },
       start_date: DataTypes.DATE,
       end_date: DataTypes.DATE,
+      new_user_only: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      seller_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: "NULL = mã sàn; khác NULL = mã của shop (seller user id)",
+      },
     },
     {
       sequelize,

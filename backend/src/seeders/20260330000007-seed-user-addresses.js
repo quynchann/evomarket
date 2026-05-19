@@ -11,7 +11,7 @@ module.exports = {
         city: 'Hà Nội',
         state: 'Hoàn Kiếm',
         country: 'Việt Nam',
-        zipcode: '100000',
+        zipcode: '',
         is_default: true
       },
       {
@@ -21,7 +21,7 @@ module.exports = {
         city: 'Hà Nội',
         state: 'Ba Đình',
         country: 'Việt Nam',
-        zipcode: '100000',
+        zipcode: '',
         is_default: false
       },
       {
@@ -31,7 +31,7 @@ module.exports = {
         city: 'Hồ Chí Minh',
         state: 'Quận 1',
         country: 'Việt Nam',
-        zipcode: '700000',
+        zipcode: '',
         is_default: true
       },
       {
@@ -41,7 +41,7 @@ module.exports = {
         city: 'Đà Nẵng',
         state: 'Hải Châu',
         country: 'Việt Nam',
-        zipcode: '550000',
+        zipcode: '',
         is_default: true
       },
       {
@@ -51,7 +51,7 @@ module.exports = {
         city: 'Hà Nội',
         state: 'Cầu Giấy',
         country: 'Việt Nam',
-        zipcode: '100000',
+        zipcode: '',
         is_default: true
       },
       {
@@ -61,7 +61,7 @@ module.exports = {
         city: 'Hồ Chí Minh',
         state: 'Quận 10',
         country: 'Việt Nam',
-        zipcode: '700000',
+        zipcode: '',
         is_default: true
       },
       {
@@ -71,7 +71,7 @@ module.exports = {
         city: 'Hà Nội',
         state: 'Thanh Xuân',
         country: 'Việt Nam',
-        zipcode: '100000',
+        zipcode: '',
         is_default: true
       }
     ]

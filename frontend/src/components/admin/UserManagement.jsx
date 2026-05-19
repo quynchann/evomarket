@@ -1298,11 +1298,6 @@ const App = () => {
                 <span className="text-xl">🔔</span>
                 <span className={CUSTOM_CLASSES.notificationDot}></span>
               </button>
-              <button
-                className={`px-5 py-2.5 ${CUSTOM_CLASSES.gradientOrange} rounded-lg text-sm font-medium text-white shadow-md transition hover:opacity-90`}
-              >
-                Xuất báo cáo
-              </button>
             </div>
           </div>
         </header>

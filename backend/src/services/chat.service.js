@@ -31,8 +31,27 @@ export const messageToSocketPayload = (messageInstance, { tempId } = {}) => {
   }
 }
 
-export const assertConversationMember = async (conversationId, userId) => {
-  const conversation = await Conversation.findByPk(conversationId)
+const USER_CHAT_ATTRS = ['id', 'fullname', 'avatar', 'role']
+
+export const assertConversationMember = async (
+  conversationId,
+  userId,
+  userRole = null
+) => {
+  const conversation = await Conversation.findByPk(conversationId, {
+    include: [
+      {
+        model: User,
+        as: 'User1',
+        attributes: USER_CHAT_ATTRS
+      },
+      {
+        model: User,
+        as: 'User2',
+        attributes: USER_CHAT_ATTRS
+      }
+    ]
+  })
   if (!conversation) {
     throw new ApiError(
       StatusCodes.NOT_FOUND,
@@ -47,32 +66,57 @@ export const assertConversationMember = async (conversationId, userId) => {
       'UNAUTHORIZED_ACCESS_TO_CONVERSATION'
     )
   }
+  if (userRole === 'admin') {
+    const other =
+      conversation.user1_id === userId ? conversation.User2 : conversation.User1
+    if (!other || other.role !== 'seller') {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Admin can only chat with sellers',
+        'ADMIN_SELLER_CHAT_ONLY'
+      )
+    }
+  }
   return conversation
 }
 
 /**
  * Lấy danh sách conversations của user với cursor pagination
+ * @param {string|null} userRole — nếu `admin`, chỉ trả hội thoại với seller
  */
 export const getConversations = async (
   userId,
-  { limit = 20, after, before } = {}
+  { limit = 20, after, before } = {},
+  userRole = null
 ) => {
+  const memberWhere =
+    userRole === 'admin'
+      ? {
+          [Op.or]: [
+            { user1_id: userId, '$User2.role$': 'seller' },
+            { user2_id: userId, '$User1.role$': 'seller' }
+          ]
+        }
+      : {
+          [Op.or]: [{ user1_id: userId }, { user2_id: userId }]
+        }
+
   const paginationOptions = {
-    where: {
-      [Op.or]: [{ user1_id: userId }, { user2_id: userId }]
-    },
+    where: memberWhere,
     limit: parseInt(limit),
     order: [['last_message_at', 'DESC']],
+    distinct: true,
+    subQuery: false,
     include: [
       {
         model: User,
         as: 'User1',
-        attributes: ['id', 'fullname', 'avatar']
+        attributes: USER_CHAT_ATTRS
       },
       {
         model: User,
         as: 'User2',
-        attributes: ['id', 'fullname', 'avatar']
+        attributes: USER_CHAT_ATTRS
       }
     ]
   }
@@ -104,9 +148,10 @@ export const getConversations = async (
 export const getMessages = async (
   conversationId,
   userId,
-  { limit = 50, after, before } = {}
+  { limit = 50, after, before } = {},
+  userRole = null
 ) => {
-  await assertConversationMember(conversationId, userId)
+  await assertConversationMember(conversationId, userId, userRole)
 
   const paginationOptions = {
     where: {
@@ -197,10 +242,16 @@ export const getOrCreateConversation = async (user1Id, user2Id) => {
 /**
  * Gửi message mới
  */
-export const sendMessage = async (conversationId, senderId, content) => {
+export const sendMessage = async (
+  conversationId,
+  senderId,
+  content,
+  { userRole } = {}
+) => {
   const conversation = await assertConversationMember(
     conversationId,
-    senderId
+    senderId,
+    userRole
   )
 
   const message = await Message.create({
@@ -231,8 +282,12 @@ export const sendMessage = async (conversationId, senderId, content) => {
 /**
  * Đánh dấu messages đã đọc
  */
-export const markMessagesAsRead = async (conversationId, userId) => {
-  await assertConversationMember(conversationId, userId)
+export const markMessagesAsRead = async (
+  conversationId,
+  userId,
+  userRole = null
+) => {
+  await assertConversationMember(conversationId, userId, userRole)
 
   await Message.update(
     { is_read: true },
@@ -251,12 +306,26 @@ export const markMessagesAsRead = async (conversationId, userId) => {
 /**
  * Lấy số lượng unread messages
  */
-export const getUnreadCount = async (userId) => {
+export const getUnreadCount = async (userId, userRole = null) => {
+  const memberWhere =
+    userRole === 'admin'
+      ? {
+          [Op.or]: [
+            { user1_id: userId, '$User2.role$': 'seller' },
+            { user2_id: userId, '$User1.role$': 'seller' }
+          ]
+        }
+      : {
+          [Op.or]: [{ user1_id: userId }, { user2_id: userId }]
+        }
+
   const conversations = await Conversation.findAll({
-    where: {
-      [Op.or]: [{ user1_id: userId }, { user2_id: userId }]
-    },
-    attributes: ['id']
+    where: memberWhere,
+    attributes: ['id'],
+    include: [
+      { model: User, as: 'User1', attributes: [] },
+      { model: User, as: 'User2', attributes: [] }
+    ]
   })
 
   const conversationIds = conversations.map((c) => c.id)
@@ -275,8 +344,13 @@ export const getUnreadCount = async (userId) => {
 /**
  * Đánh dấu một tin đã đọc (người đọc không phải người gửi)
  */
-export const markOneMessageRead = async (conversationId, readerId, messageId) => {
-  await assertConversationMember(conversationId, readerId)
+export const markOneMessageRead = async (
+  conversationId,
+  readerId,
+  messageId,
+  userRole = null
+) => {
+  await assertConversationMember(conversationId, readerId, userRole)
 
   const mid = parseInt(messageId, 10)
   if (Number.isNaN(mid)) {

@@ -6,7 +6,7 @@ export function SellerLayout() {
   return (
     <div className="flex h-dvh flex-col bg-linear-to-br from-orange-50 via-white to-red-50">
       <SellerHeader />
-      <main className="h-svh w-full flex-1 overflow-auto">
+      <main className="min-h-0 w-full flex-1 overflow-auto">
         <Outlet />
       </main>
     </div>

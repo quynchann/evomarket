@@ -147,3 +147,54 @@ export const getMe = async (req, res, next) => {
     next(error)
   }
 }
+
+/**
+ * Update current user profile
+ * PATCH /api-v1/auth/me
+ */
+export const updateMe = async (req, res, next) => {
+  try {
+    const userId = req.user.id
+    const { fullname, phone_number, birthday, gender, shop_name } = req.body
+
+    const user = await authService.updateProfile(userId, {
+      fullname,
+      phone_number,
+      birthday,
+      gender,
+      shop_name,
+    })
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: { user }
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Change password (requires current password)
+ * POST /api-v1/auth/change-password
+ */
+export const changePassword = async (req, res, next) => {
+  try {
+    const userId = req.user.id
+    const { current_password, new_password } = req.body
+
+    await authService.changePassword(userId, {
+      current_password,
+      new_password
+    })
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: {
+        message: 'Đổi mật khẩu thành công. Các phiên đăng nhập khác đã được đăng xuất.'
+      }
+    })
+  } catch (error) {
+    next(error)
+  }
+}

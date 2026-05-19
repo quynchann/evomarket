@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   Search,
@@ -9,10 +10,12 @@ import {
   Pin,
   ChevronDown,
   MoreHorizontal,
+  ChevronLeft,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useChatSocketStore } from '@/stores/useChatSocketStore'
-import { chatApi } from '@/services/chatApi'
+import { useSystemSocketStore } from '@/stores/useSystemSocketStore'
+import { chatApi, chatQueryKeys } from '@/services/chatApi'
 import { useChatInfiniteConversations } from '@/hooks/useChatInfiniteConversations'
 import { useChatInfiniteMessages } from '@/hooks/useChatInfiniteMessages'
 import {
@@ -45,9 +48,11 @@ export default function ChatShell({
 }) {
   const { conversationId: conversationIdParam } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const currentUserId = useAuthStore((s) => s.user?.id)
   const [openMenuId, setOpenMenuId] = useState(null)
   const [pinnedIds, setPinnedIds] = useState(() => new Set())
+  const [mobileInboxOpen, setMobileInboxOpen] = useState(true)
   const [input, setInput] = useState('')
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
@@ -56,6 +61,7 @@ export default function ChatShell({
   const imageInputRef = useRef(null)
   const audioInputRef = useRef(null)
   const typingStopTimerRef = useRef(null)
+  const lastMarkedOpenConvRef = useRef(null)
 
   const activeConversationId = useMemo(() => {
     if (conversationIdParam == null || conversationIdParam === '') return null
@@ -89,6 +95,45 @@ export default function ChatShell({
       .then((res) => setTotalUnread(res.data?.unreadCount ?? 0))
       .catch(() => {})
   }, [])
+
+  const bumpGlobalUnreadQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: chatQueryKeys.unreadCount })
+  }, [queryClient])
+
+  /** Đánh dấu đã đọc khi đang mở 1 cuộc (gồm redirect tự động tới cuộc đầu), tránh lệch Dashboard */
+  useEffect(() => {
+    if (activeConversationId == null) {
+      lastMarkedOpenConvRef.current = null
+      return
+    }
+    if (loadingConvList) return
+    if (!conversations.some((c) => c.id === activeConversationId)) return
+    if (lastMarkedOpenConvRef.current === activeConversationId) return
+
+    let cancelled = false
+    chatApi
+      .markAsRead(activeConversationId)
+      .then(() => {
+        if (!cancelled) {
+          lastMarkedOpenConvRef.current = activeConversationId
+          refreshUnreadCount()
+          bumpGlobalUnreadQueries()
+        }
+      })
+      .catch(() => {
+        toast.error('Không đánh dấu đã đọc được')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    activeConversationId,
+    loadingConvList,
+    conversations,
+    refreshUnreadCount,
+    bumpGlobalUnreadQueries,
+  ])
 
   useEffect(() => {
     refreshUnreadCount()
@@ -152,11 +197,20 @@ export default function ChatShell({
   const activeName = activeOther?.fullname || peerFallbackName
   const activeAvatarUrl = resolveAvatarUrl(activeOther?.avatar)
 
+  const onlineUsers = useSystemSocketStore((s) => s.onlineUsers)
+
+  const activePeerOnline = useMemo(() => {
+    const pid = activeOther?.id
+    if (pid == null) return false
+    return onlineUsers.has(Number(pid))
+  }, [activeOther?.id, onlineUsers])
+
   const typingUserSet = useChatSocketStore((s) =>
     activeConversationId != null
       ? s.typingUsers[activeConversationId]
       : null,
   )
+
   const peerTyping =
     Boolean(typingUserSet) &&
     [...typingUserSet].some((id) => id !== currentUserId)
@@ -174,14 +228,22 @@ export default function ChatShell({
     [bubbles],
   )
 
-  const selectConversation = async (conv) => {
+  useEffect(() => {
+    const mq =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(min-width: 768px)')
+    if (mq.matches) return
+    if (conversationIdParam) setMobileInboxOpen(false)
+  }, [conversationIdParam])
+
+  const selectConversation = (conv) => {
     navigate(`${chatPath}/${conv.id}`)
     setOpenMenuId(null)
-    try {
-      await chatApi.markAsRead(conv.id)
-      refreshUnreadCount()
-    } catch {
-      toast.error('Không đánh dấu đã đọc được')
+    if (
+      typeof window !== 'undefined' &&
+      !window.matchMedia('(min-width: 768px)').matches
+    ) {
+      setMobileInboxOpen(false)
     }
   }
 
@@ -215,6 +277,7 @@ export default function ChatShell({
     try {
       await chatApi.markAsRead(conversationId)
       refreshUnreadCount()
+      bumpGlobalUnreadQueries()
       refresh()
       toast.success('Đã đánh dấu đã đọc')
     } catch {
@@ -224,10 +287,12 @@ export default function ChatShell({
   }
 
   return (
-    <div className="flex h-full flex-col overflow-auto bg-white">
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6 shadow-sm">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold text-orange-600">{pageTitle}</h1>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 shadow-sm sm:h-16 sm:px-6">
+        <div className="flex min-w-0 items-center gap-2">
+          <h1 className="truncate text-lg font-semibold text-orange-600 sm:text-xl">
+            {pageTitle}
+          </h1>
           {totalUnread > 0 && (
             <span className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-red-500 px-2 text-xs font-bold text-white">
               {totalUnread}
@@ -236,9 +301,13 @@ export default function ChatShell({
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <aside className="flex w-80 shrink-0 flex-col border-r border-gray-200 bg-white">
-          <div className="shrink-0 border-b border-gray-200 p-4">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden md:flex-row">
+        <aside
+          className={`absolute inset-0 z-10 flex min-h-0 w-full shrink-0 flex-col border-gray-200 bg-white md:static md:z-auto md:inset-auto md:flex md:w-80 md:border-r ${
+            mobileInboxOpen ? 'flex' : 'hidden md:flex'
+          }`}
+        >
+          <div className="shrink-0 border-b border-gray-200 p-3 sm:p-4">
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -286,6 +355,8 @@ export default function ChatShell({
               const av = resolveAvatarUrl(other?.avatar)
               const initial = title.charAt(0).toUpperCase()
               const pinned = pinnedIds.has(conv.id)
+              const otherOnline =
+                other?.id != null && onlineUsers.has(Number(other.id))
 
               return (
                 <div
@@ -307,6 +378,13 @@ export default function ChatShell({
                         {initial}
                       </div>
                     )}
+                    <span
+                      title={otherOnline ? 'Trực tuyến' : 'Ngoại tuyến'}
+                      className={`absolute right-0 bottom-0 h-3 w-3 rounded-full border-2 border-white ${
+                        otherOnline ? 'bg-emerald-500' : 'bg-gray-300'
+                      }`}
+                      aria-hidden
+                    />
                   </div>
 
                   <div className="relative min-w-0 flex-1">
@@ -387,9 +465,21 @@ export default function ChatShell({
           </div>
         </aside>
 
-        <div className="flex min-h-0 flex-1 flex-col bg-gray-50">
-          <header className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
-            <div className="flex items-center gap-3">
+        <div
+          className={`relative flex min-h-0 min-w-0 flex-1 flex-col bg-gray-50 ${
+            mobileInboxOpen ? 'hidden md:flex' : 'flex'
+          }`}
+        >
+          <header className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-2.5 md:justify-start md:px-6 md:py-3">
+            <button
+              type="button"
+              aria-label="Danh sách hộp thư"
+              className="mr-2 flex shrink-0 items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100 md:hidden"
+              onClick={() => setMobileInboxOpen(true)}
+            >
+              <ChevronLeft className="h-5 w-5" aria-hidden />
+            </button>
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <div className="relative">
                 {activeAvatarUrl ? (
                   <img
@@ -402,14 +492,56 @@ export default function ChatShell({
                     {activeName.charAt(0).toUpperCase()}
                   </div>
                 )}
+                {activeConversationId != null && activeOther?.id != null && (
+                  <span
+                    title={
+                      activePeerOnline ? 'Trực tuyến' : 'Ngoại tuyến'
+                    }
+                    className={`absolute right-0 bottom-0 h-3 w-3 rounded-full border-2 border-white ${
+                      activePeerOnline ? 'bg-emerald-500' : 'bg-gray-300'
+                    }`}
+                    aria-hidden
+                  />
+                )}
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-semibold text-gray-900">
                   {activeConversationId ? activeName : '—'}
                 </h3>
-                <p className="flex items-center gap-1 text-xs text-gray-500">
-                  <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
-                  <span>Tin nhắn</span>
+                <p className="flex items-center gap-1.5 text-xs text-gray-500">
+                  {!activeConversationId || activeOther?.id == null ? (
+                    <>
+                      <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
+                      <span>Tin nhắn</span>
+                    </>
+                  ) : peerTyping ? (
+                    <>
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
+                      <span className="italic text-gray-600">
+                        Đang nhập…
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span
+                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                          activePeerOnline
+                            ? 'bg-emerald-500'
+                            : 'bg-gray-400'
+                        }`}
+                      />
+                      <span
+                        className={
+                          activePeerOnline
+                            ? 'text-emerald-700'
+                            : 'text-gray-500'
+                        }>
+                        {activePeerOnline
+                          ? 'Trực tuyến'
+                          : 'Ngoại tuyến'}
+                      </span>
+                    </>
+                  )}
                 </p>
               </div>
             </div>
@@ -462,7 +594,7 @@ export default function ChatShell({
                       key={row.key}
                       className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                       <div
-                        className={`max-w-[65%] rounded-lg p-2.5 ${
+                        className={`max-w-[calc(100vw-4rem)] rounded-lg p-2.5 sm:max-w-[65%] ${
                           mine
                             ? 'bg-orange-500 text-white'
                             : 'border border-gray-200 bg-gray-50'
@@ -481,11 +613,6 @@ export default function ChatShell({
                   )
                 })}
               </>
-            )}
-            {peerTyping && (
-              <p className="px-1 text-xs text-gray-500 italic">
-                Đối phương đang nhập…
-              </p>
             )}
           </div>
 

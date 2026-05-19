@@ -42,6 +42,29 @@ export const cartQueryKeys = {
   cart: ["cart"],
 };
 
+/**
+ * Ghi cache giỏ từ response API và kích hoạt refetch để header/sidebar luôn đồng bộ.
+ * @param {import('@tanstack/react-query').QueryClient} queryClient
+ * @param {unknown} apiResult — body { success, data } hoặc đã unwrap { items, summary }
+ */
+export function syncCartQueryAfterMutation(queryClient, apiResult) {
+  const nested = apiResult && typeof apiResult === "object" ? apiResult.data : null;
+  const payload =
+    nested && Array.isArray(nested.items) && nested.summary && typeof nested.summary === "object"
+      ? nested
+      : apiResult &&
+          typeof apiResult === "object" &&
+          Array.isArray(apiResult.items) &&
+          apiResult.summary &&
+          typeof apiResult.summary === "object"
+        ? apiResult
+        : null;
+  if (payload) {
+    queryClient.setQueryData(cartQueryKeys.cart, payload);
+  }
+  return queryClient.invalidateQueries({ queryKey: cartQueryKeys.cart });
+}
+
 export const cartQueryFunctions = {
   getCart: async () => {
     const res = await cartApi.getCart();

@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useAuthStore } from "../../stores/useAuthStore";
 import apiService from "../../services/api.js";
+import { useAuthStore } from "../../stores/useAuthStore.js";
 
 const defaultConfig = {
   page_title: "Quản lý sản phẩm",
@@ -46,7 +46,7 @@ function StatusBadge({ status }) {
   const s = map[status] || map["out-of-stock"];
   return (
     <span
-      className={`rounded-full px-2 py-1 text-xs font-medium ${s.bg} ${s.textColor}`}
+      className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap ${s.bg} ${s.textColor}`}
     >
       {s.text}
     </span>
@@ -62,7 +62,7 @@ function Modal({ open, onClose, title, children, size = "max-w-2xl" }) {
       aria-modal="true"
       role="dialog"
     >
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex min-h-[100dvh] items-center justify-center p-3 sm:min-h-screen sm:p-4">
         <div
           className="fixed inset-0"
           style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
@@ -72,7 +72,7 @@ function Modal({ open, onClose, title, children, size = "max-w-2xl" }) {
           className={`relative ${size} w-full rounded-lg bg-white shadow-xl`}
           style={{ zIndex: 60 }}
         >
-          <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 sm:px-6 sm:py-4">
             <h3 className="text-xl font-bold text-slate-800">{title}</h3>
             <button
               onClick={onClose}
@@ -93,7 +93,7 @@ function Modal({ open, onClose, title, children, size = "max-w-2xl" }) {
               </svg>
             </button>
           </div>
-          <div className="px-6 py-4">{children}</div>
+          <div className="px-4 py-4 sm:px-6">{children}</div>
         </div>
       </div>
     </div>
@@ -104,25 +104,42 @@ function Modal({ open, onClose, title, children, size = "max-w-2xl" }) {
 export default function ProductManager() {
   const [config] = useState(defaultConfig);
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
+
+  const accessToken = useAuthStore((s) => s.accessToken);
+
+  const [authHydrated, setAuthHydrated] = useState(
+    () => useAuthStore.persist.hasHydrated(),
+  );
+
+  useEffect(() => {
+    setAuthHydrated(useAuthStore.persist.hasHydrated());
+    return useAuthStore.persist.onFinishHydration(() => {
+      setAuthHydrated(true);
+    });
+  }, []);
+
+  const sellerApiReady = authHydrated && !!accessToken;
 
   const categoriesQuery = useQuery({
     queryKey: ["seller", "categories"],
     queryFn: async () => {
       const res = await apiService.seller.listCategories();
-      return res.data.categories;
+      const list = res?.data?.categories;
+      if (!Array.isArray(list)) return [];
+      return list;
     },
+    enabled: sellerApiReady,
   });
 
   const productsQuery = useQuery({
     queryKey: ["seller", "products"],
     queryFn: async () => {
       const res = await apiService.seller.listProducts();
-      return res.data.products;
+      const list = res?.data?.products;
+      if (!Array.isArray(list)) return [];
+      return list;
     },
+    enabled: sellerApiReady,
   });
 
   const products = useMemo(
@@ -387,161 +404,32 @@ export default function ProductManager() {
   /* ---------- Simple product detail modal ---------- */
   const [detailProduct, setDetailProduct] = useState(null);
 
-  /* ---------- Header handlers ---------- */
-  const menuItems = [
-    { name: "Trang chủ", path: "/seller/home" },
-    { name: "Sản phẩm", path: "/seller/products", active: true },
-    { name: "Đơn hàng", path: "/seller/orders" },
-    { name: "Marketing", path: null },
-    { name: "Tài chính", path: null },
-    { name: "Dữ liệu", path: null },
-  ];
-
-  const handleMenuClick = (item) => {
-    if (item.path) {
-      navigate(item.path);
-    } else {
-      toast.info(`Tính năng "${item.name}" đang phát triển`);
-    }
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    navigate("/seller/login", { replace: true });
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    if (isDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isDropdownOpen]);
-
   /* ---------- Render ---------- */
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ===== HEADER ===== */}
-      <header className="sticky top-0 z-50 bg-gradient-to-r from-orange-500 to-red-500 text-white shadow">
-        <div className="bg-gradient-to-r from-orange-600 to-red-600 py-2">
-          <div className="flex justify-between px-6 text-sm">
-            <div className="flex space-x-4">
-              <span>🏪 Kênh Người Bán</span>
-              <span>Trung tâm hỗ trợ</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="cursor-pointer hover:text-orange-200">
-                🔔 Thông báo
-              </span>
-              
-              {/* User Dropdown */}
-              <div className="relative" ref={dropdownRef}>
-                <div 
-                  className="flex items-center space-x-2 cursor-pointer hover:opacity-90 transition"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32"
-                    alt="avatar"
-                    className="h-8 w-8 rounded-full border-2 border-white"
-                  />
-                  <span>{user?.fullname || "Bunny Store"}</span>
-                </div>
-
-                {/* Dropdown Menu */}
-                {isDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-48 rounded-lg bg-white shadow-xl border border-gray-200 py-2 z-50">
-                    <button
-                      onClick={() => {
-                        setIsDropdownOpen(false);
-                        navigate("/seller/profile");
-                      }}
-                      className="flex w-full items-center gap-3 px-4 py-2 text-left text-gray-700 hover:bg-orange-50 transition"
-                    >
-                      <svg className="h-5 w-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      <span>Hồ sơ cá nhân</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setIsDropdownOpen(false);
-                        navigate("/seller/settings");
-                      }}
-                      className="flex w-full items-center gap-3 px-4 py-2 text-left text-gray-700 hover:bg-orange-50 transition"
-                    >
-                      <svg className="h-5 w-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span>Cài đặt</span>
-                    </button>
-
-                    <div className="my-1 h-px bg-gray-200"></div>
-
-                    <button
-                      onClick={handleLogout}
-                      className="flex w-full items-center gap-3 px-4 py-2 text-left text-red-600 hover:bg-red-50 transition"
-                    >
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      <span>Đăng xuất</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+    <div className="min-h-full bg-gray-50">
+      <div className="px-4 py-6 sm:px-6 sm:py-8">
+        {/* Page Title */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 sm:text-3xl">
+              Quản lý sản phẩm
+            </h1>
+            <p className="mt-2 text-gray-600">
+              Quản lý danh mục và sản phẩm của cửa hàng
+            </p>
           </div>
-        </div>
-
-        {/* Nav */}
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center space-x-8">
-            <h1 className="text-3xl font-bold">EvoMarket Seller</h1>
-            <nav className="flex space-x-6">
-              {menuItems.map((item, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleMenuClick(item)}
-                  className={`pb-1 hover:text-orange-200 transition ${
-                    item.active ? "border-b-2 border-white" : ""
-                  }`}
-                >
-                  {item.name}
-                </button>
-              ))}
-            </nav>
-          </div>
-          <button 
+          <button
+            type="button"
             onClick={() => openAddProduct()}
-            className="rounded-xl bg-white px-4 py-2 font-medium text-orange-500 shadow hover:bg-orange-50 transition"
+            className="shrink-0 rounded-xl bg-white px-4 py-2 font-medium text-orange-600 shadow hover:bg-orange-50"
           >
             + Thêm sản phẩm
           </button>
         </div>
-      </header>
-
-      {/* ===== MAIN CONTENT ===== */}
-      <main className="px-6 py-8">
-        {/* Page Title */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">Quản lý sản phẩm</h1>
-          <p className="mt-2 text-gray-600">Quản lý danh mục và sản phẩm của cửa hàng</p>
-        </div>
 
         {/* Tabs */}
-        <div className="mb-6 border-b border-slate-200">
-          <nav className="flex space-x-8">
+        <div className="mb-6 overflow-x-auto border-b border-slate-200">
+          <nav className="flex w-max min-w-full gap-6 sm:w-auto sm:min-w-0">
             {/* Danh mục trước, Sản phẩm sau */}
             <button
               onClick={() => setActiveTab("categories")}
@@ -705,7 +593,7 @@ export default function ProductManager() {
                     }}
                   >
                     <tr>
-                      <th className="px-6 py-3 text-left">
+                      <th className="px-2 py-2 sm:px-3 sm:py-3 lg:px-6 text-left">
                         <input
                           type="checkbox"
                           className="h-4 w-4 rounded"
@@ -718,83 +606,83 @@ export default function ProductManager() {
                       </th>
                       <th
                         id="column-product"
-                        className="px-6 py-3 text-left text-xs font-semibold tracking-wider uppercase"
+                        className="px-2 py-2 sm:px-3 sm:py-3 lg:px-6 text-left text-xs font-semibold tracking-wider uppercase"
                         style={{ color: config.secondary_text_color }}
                       >
                         Sản phẩm
                       </th>
                       <th
                         id="column-category"
-                        className="px-6 py-3 text-left text-xs font-semibold tracking-wider uppercase"
+                        className="px-2 py-2 sm:px-3 sm:py-3 lg:px-6 text-left text-xs font-semibold tracking-wider uppercase"
                         style={{ color: config.secondary_text_color }}
                       >
                         Danh mục
                       </th>
                       <th
                         id="column-import-price"
-                        className="px-6 py-3 text-left text-xs font-semibold tracking-wider uppercase"
+                        className="px-2 py-2 sm:px-3 sm:py-3 lg:px-6 text-left text-xs font-semibold tracking-wider uppercase"
                         style={{ color: config.secondary_text_color }}
                       >
                         Giá nhập
                       </th>
                       <th
                         id="column-selling-price"
-                        className="px-6 py-3 text-left text-xs font-semibold tracking-wider uppercase"
+                        className="px-2 py-2 sm:px-3 sm:py-3 lg:px-6 text-left text-xs font-semibold tracking-wider uppercase"
                         style={{ color: config.secondary_text_color }}
                       >
                         Giá bán
                       </th>
                       <th
                         id="column-platform-fee"
-                        className="px-6 py-3 text-left text-xs font-semibold tracking-wider uppercase text-orange-600"
+                        className="px-2 py-2 sm:px-3 sm:py-3 lg:px-6 text-left text-xs font-semibold tracking-wider uppercase text-orange-600"
                         style={{ color: "#ea580c" }}
                       >
                         Phí sàn (5%)
                       </th>
                       <th
                         id="column-seller-receive"
-                        className="px-6 py-3 text-left text-xs font-semibold tracking-wider uppercase text-green-700"
+                        className="px-2 py-2 sm:px-3 sm:py-3 lg:px-6 text-left text-xs font-semibold tracking-wider uppercase text-green-700"
                         style={{ color: "#15803d" }}
                       >
                         Seller nhận
                       </th>
                       <th
                         id="column-stock"
-                        className="px-6 py-3 text-left text-xs font-semibold tracking-wider uppercase"
+                        className="px-2 py-2 sm:px-3 sm:py-3 lg:px-6 text-left text-xs font-semibold tracking-wider uppercase"
                         style={{ color: config.secondary_text_color }}
                       >
                         Tồn kho
                       </th>
                       <th
                         id="column-sold"
-                        className="px-6 py-3 text-left text-xs font-semibold tracking-wider uppercase"
+                        className="px-2 py-2 sm:px-3 sm:py-3 lg:px-6 text-left text-xs font-semibold tracking-wider uppercase"
                         style={{ color: config.secondary_text_color }}
                       >
                         Đã bán
                       </th>
                       <th
                         id="column-profit-per-unit"
-                        className="px-6 py-3 text-left text-xs font-semibold tracking-wider uppercase"
+                        className="px-2 py-2 sm:px-3 sm:py-3 lg:px-6 text-left text-xs font-semibold tracking-wider uppercase"
                         style={{ color: config.secondary_text_color }}
                       >
                         Lợi nhuận/sp
                       </th>
                       <th
                         id="column-total-profit"
-                        className="px-6 py-3 text-left text-xs font-semibold tracking-wider uppercase"
+                        className="px-2 py-2 sm:px-3 sm:py-3 lg:px-6 text-left text-xs font-semibold tracking-wider uppercase"
                         style={{ color: config.secondary_text_color }}
                       >
                         Tổng lợi nhuận
                       </th>
                       <th
                         id="column-status"
-                        className="px-6 py-3 text-left text-xs font-semibold tracking-wider uppercase"
+                        className="min-w-26 whitespace-nowrap px-2 py-2 text-center text-xs font-semibold tracking-wider uppercase sm:px-3 sm:py-3 lg:px-6"
                         style={{ color: config.secondary_text_color }}
                       >
                         Trạng thái
                       </th>
                       <th
-                        className="px-6 py-3 text-right text-xs font-semibold tracking-wider uppercase"
+                        className="px-2 py-2 sm:px-3 sm:py-3 lg:px-6 text-right text-xs font-semibold tracking-wider uppercase"
                         style={{ color: config.secondary_text_color }}
                       >
                         Thao tác
@@ -807,11 +695,35 @@ export default function ProductManager() {
                     className="divide-y"
                     style={{ divideColor: "#e2e8f0" }}
                   >
-                    {productsQuery.isLoading ? (
+                    {!authHydrated ? (
                       <tr>
                         <td
                           colSpan={13}
-                          className="px-6 py-8 text-center text-slate-500"
+                          className="px-4 py-8 sm:px-6 text-center text-slate-500"
+                        >
+                          Đang khôi phục phiên đăng nhập…
+                        </td>
+                      </tr>
+                    ) : !accessToken ? (
+                      <tr>
+                        <td
+                          colSpan={13}
+                          className="px-4 py-8 sm:px-6 text-center text-slate-600"
+                        >
+                          <p className="mb-2">Bạn chưa đăng nhập kênh người bán.</p>
+                          <Link
+                            to="/seller/login"
+                            className="font-medium text-orange-600 underline hover:text-orange-700"
+                          >
+                            Đăng nhập seller
+                          </Link>
+                        </td>
+                      </tr>
+                    ) : productsQuery.isLoading ? (
+                      <tr>
+                        <td
+                          colSpan={13}
+                          className="px-4 py-8 sm:px-6 text-center text-slate-500"
                         >
                           Đang tải danh sách sản phẩm…
                         </td>
@@ -820,17 +732,27 @@ export default function ProductManager() {
                       <tr>
                         <td
                           colSpan={13}
-                          className="px-6 py-8 text-center text-red-600"
+                          className="px-4 py-8 sm:px-6 text-center text-red-600"
                         >
-                          Không tải được dữ liệu. Hãy chắc backend đang chạy và bạn
-                          đã đăng nhập seller.
+                          <p className="mb-1 font-medium">
+                            {productsQuery.error?.code === "FORBIDDEN"
+                              ? "Không có quyền truy cập API người bán."
+                              : "Không tải được dữ liệu."}
+                          </p>
+                          <p className="text-sm text-red-700/90">
+                            {productsQuery.error?.message ||
+                              "Kiểm tra backend và token đăng nhập."}
+                            {productsQuery.error?.status
+                              ? ` (HTTP ${productsQuery.error.status})`
+                              : ""}
+                          </p>
                         </td>
                       </tr>
                     ) : pageProducts.length === 0 ? (
                       <tr>
                         <td
                           colSpan={13}
-                          className="px-6 py-8 text-center text-slate-500"
+                          className="px-4 py-8 sm:px-6 text-center text-slate-500"
                         >
                           Không có sản phẩm nào.
                         </td>
@@ -838,7 +760,7 @@ export default function ProductManager() {
                     ) : (
                       pageProducts.map((product) => (
                         <tr key={product.id} className="hover:bg-slate-50">
-                          <td className="px-6 py-4 align-middle">
+                          <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <input
                               type="checkbox"
                               className="h-4 w-4 rounded"
@@ -847,7 +769,7 @@ export default function ProductManager() {
                             />
                           </td>
 
-                          <td className="px-6 py-4 align-middle">
+                          <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <div className="flex items-center gap-3">
                               <div
                                 className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg"
@@ -889,7 +811,7 @@ export default function ProductManager() {
                             </div>
                           </td>
 
-                          <td className="px-6 py-4 align-middle">
+                          <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <span
                               className="text-sm"
                               style={{ color: config.text_color }}
@@ -898,7 +820,7 @@ export default function ProductManager() {
                             </span>
                           </td>
 
-                          <td className="px-6 py-4 align-middle">
+                          <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <span
                               className="font-medium"
                               style={{ color: config.text_color }}
@@ -907,7 +829,7 @@ export default function ProductManager() {
                             </span>
                           </td>
 
-                          <td className="px-6 py-4 align-middle">
+                          <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <span
                               className="font-medium"
                               style={{ color: config.text_color }}
@@ -916,19 +838,19 @@ export default function ProductManager() {
                             </span>
                           </td>
 
-                          <td className="px-6 py-4 align-middle">
+                          <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <span className="text-sm text-orange-600">
                               {formatPrice(Math.round((product.price * PLATFORM_FEE_PERCENT) / 100))}
                             </span>
                           </td>
 
-                          <td className="px-6 py-4 align-middle">
+                          <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <span className="font-semibold text-green-700">
                               {formatPrice(product.price - Math.round((product.price * PLATFORM_FEE_PERCENT) / 100))}
                             </span>
                           </td>
 
-                          <td className="px-6 py-4 align-middle">
+                          <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <span
                               className="text-sm"
                               style={{ color: config.text_color }}
@@ -937,7 +859,7 @@ export default function ProductManager() {
                             </span>
                           </td>
 
-                          <td className="px-6 py-4 align-middle">
+                          <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <span
                               className="text-sm font-medium"
                               style={{ color: config.text_color }}
@@ -946,7 +868,7 @@ export default function ProductManager() {
                             </span>
                           </td>
 
-                          <td className="px-6 py-4 align-middle">
+                          <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <span
                               className="font-medium text-green-600"
                             >
@@ -954,7 +876,7 @@ export default function ProductManager() {
                             </span>
                           </td>
 
-                          <td className="px-6 py-4 align-middle">
+                          <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <span
                               className="font-bold text-green-700"
                             >
@@ -962,11 +884,11 @@ export default function ProductManager() {
                             </span>
                           </td>
 
-                          <td className="px-6 py-4 align-middle">
+                          <td className="whitespace-nowrap px-2 py-3 text-center align-middle sm:px-3 sm:py-4 lg:px-6">
                             <StatusBadge status={product.status} />
                           </td>
 
-                          <td className="px-6 py-4 align-middle">
+                          <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <div className="flex items-center justify-end gap-2">
                               <button
                                 onClick={() => openEditProduct(product.id)}
@@ -1018,11 +940,11 @@ export default function ProductManager() {
 
               {/* Pagination */}
               <div
-                className="flex items-center justify-between px-6 py-4"
+                className="flex flex-col gap-3 border-t px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:px-6"
                 style={{ borderTop: "1px solid #e2e8f0" }}
               >
                 <div
-                  className="text-sm"
+                  className="text-center text-xs sm:text-left sm:text-sm"
                   style={{ color: config.secondary_text_color }}
                 >
                   Hiển thị{" "}
@@ -1048,7 +970,7 @@ export default function ProductManager() {
                   </span>{" "}
                   sản phẩm
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex w-full shrink-0 items-center justify-center gap-2 sm:w-auto sm:justify-end">
                   <button
                     className="rounded border px-2 py-1 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                     style={{
@@ -1076,7 +998,7 @@ export default function ProductManager() {
                   </button>
 
                   {/* simple page numbers */}
-                  <div className="flex gap-1">
+                  <div className="flex max-w-[min(100%,12rem)] gap-1 overflow-x-auto pb-1 sm:max-w-none">
                     {Array.from({ length: totalPages }).map((_, i) => (
                       <button
                         key={i}
@@ -1180,7 +1102,7 @@ export default function ProductManager() {
             </div>
           </div>
         )}
-      </main>
+      </div>
 
       {/* ---------- Modals ---------- */}
 
@@ -1260,7 +1182,7 @@ export default function ProductManager() {
             </div>
           </div>
 
-          <div className="mt-6 flex gap-3">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
               onClick={() => {
@@ -1328,7 +1250,7 @@ export default function ProductManager() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label
                   className="mb-1 block text-sm font-medium"
@@ -1384,7 +1306,7 @@ export default function ProductManager() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label
                   className="mb-1 block text-sm font-medium"
@@ -1584,7 +1506,7 @@ export default function ProductManager() {
             </div>
           </div>
 
-          <div className="mt-6 flex gap-3">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
               onClick={() => {
@@ -1627,9 +1549,9 @@ export default function ProductManager() {
       >
         {detailProduct && (
           <div className="space-y-4">
-            <div className="flex gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row">
               <div
-                className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-lg"
+                className="mx-auto flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg sm:mx-0"
                 style={{ backgroundColor: config.background_color }}
               >
                 {detailProduct.image &&
@@ -1643,7 +1565,7 @@ export default function ProductManager() {
                   <div className="text-4xl">{detailProduct.image || "📦"}</div>
                 )}
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <h3
                   className="text-lg font-bold"
                   style={{ color: config.text_color }}
@@ -1692,7 +1614,7 @@ export default function ProductManager() {
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                     <div>
                       <span className="text-gray-600">Danh mục:</span>
                       <p className="font-medium">{detailProduct.category}</p>
@@ -1732,7 +1654,7 @@ export default function ProductManager() {
               </p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={() => openEditProduct(detailProduct.id)}
                 className="rounded-lg px-4 py-2"

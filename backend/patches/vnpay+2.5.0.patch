@@ -1,0 +1,58 @@
+diff --git a/node_modules/vnpay/dist/chunk-L7CUEWUR.cjs b/node_modules/vnpay/dist/chunk-L7CUEWUR.cjs
+index f6924d1..27e5dfd 100644
+--- a/node_modules/vnpay/dist/chunk-L7CUEWUR.cjs
++++ b/node_modules/vnpay/dist/chunk-L7CUEWUR.cjs
+@@ -399,9 +399,6 @@ var _QueryService = class _QueryService {
+       throw new Error(`HTTP error! status: ${response.status}`);
+     }
+     const responseData = await response.json();
+-    if (responseData?.vnp_Amount) {
+-      responseData.vnp_Amount = responseData.vnp_Amount / 100;
+-    }
+     const message = chunk2VMSAU7V_cjs.getResponseByStatusCode(
+       responseData.vnp_ResponseCode?.toString() ?? "",
+       data?.vnp_Locale ?? this.config.vnp_Locale,
+@@ -445,6 +442,14 @@ var _QueryService = class _QueryService {
+         )
+       };
+     }
++    if (responseData?.vnp_Amount) {
++      responseData.vnp_Amount = responseData.vnp_Amount / 100;
++    }
++    outputResults = {
++      ...outputResults,
++      ...responseData,
++      vnp_Message: outputResults.vnp_Message
++    };
+     const data2Log = {
+       createdAt: /* @__PURE__ */ new Date(),
+       method: "refund",
+diff --git a/node_modules/vnpay/dist/chunk-PHIG47AV.js b/node_modules/vnpay/dist/chunk-PHIG47AV.js
+index 6075084..43d1302 100644
+--- a/node_modules/vnpay/dist/chunk-PHIG47AV.js
++++ b/node_modules/vnpay/dist/chunk-PHIG47AV.js
+@@ -397,9 +397,6 @@ var _QueryService = class _QueryService {
+       throw new Error(`HTTP error! status: ${response.status}`);
+     }
+     const responseData = await response.json();
+-    if (responseData?.vnp_Amount) {
+-      responseData.vnp_Amount = responseData.vnp_Amount / 100;
+-    }
+     const message = getResponseByStatusCode(
+       responseData.vnp_ResponseCode?.toString() ?? "",
+       data?.vnp_Locale ?? this.config.vnp_Locale,
+@@ -443,6 +440,14 @@ var _QueryService = class _QueryService {
+         )
+       };
+     }
++    if (responseData?.vnp_Amount) {
++      responseData.vnp_Amount = responseData.vnp_Amount / 100;
++    }
++    outputResults = {
++      ...outputResults,
++      ...responseData,
++      vnp_Message: outputResults.vnp_Message
++    };
+     const data2Log = {
+       createdAt: /* @__PURE__ */ new Date(),
+       method: "refund",

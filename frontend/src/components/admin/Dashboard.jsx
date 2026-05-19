@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/useAuthStore";
 
 // Xóa thuộc tính active cứng, sẽ xử lý bằng state
 const navItems = [
   { icon: "📊", label: "Tổng quan" },
+  { icon: "💬", label: "Chat với người bán", path: "/admin/chat" },
   { icon: "🛒", label: "Quản lý đơn hàng" },
   { icon: "📦", label: "Quản lý sản phẩm" },
   { icon: "👥", label: "Quản lý người dùng" },
@@ -327,19 +328,6 @@ const SettingsContent = () => {
               </div>
               <div className="flex items-center justify-between border-t border-gray-50 py-2">
                 <div>
-                  <p className="font-medium text-gray-800">
-                    Xác thực 2 bước (2FA)
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Tăng cường bảo mật cho tài khoản admin
-                  </p>
-                </div>
-                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                  Đang bật
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-t border-gray-50 py-2">
-                <div>
                   <p className="font-medium text-gray-800">Phiên đăng nhập</p>
                   <p className="text-sm text-gray-500">
                     Quản lý các thiết bị đang đăng nhập
@@ -561,8 +549,8 @@ const DashboardContent = () => (
         <div className="space-y-4">
           <OrderStatusItem
             icon="⏳"
-            status="Pending"
-            subStatus="Chờ xử lý"
+            status="PENDING_CONFIRMATION"
+            subStatus="Chờ xác nhận"
             count="342"
             bgClass="bg-yellow-50"
             borderClass="border-yellow-200"
@@ -571,8 +559,8 @@ const DashboardContent = () => (
           />
           <OrderStatusItem
             icon="⚙️"
-            status="Processing"
-            subStatus="Đang xử lý"
+            status="PREPARING"
+            subStatus="Đang chuẩn bị / đã xác nhận"
             count="1,247"
             bgClass="bg-blue-50"
             borderClass="border-blue-200"
@@ -581,8 +569,8 @@ const DashboardContent = () => (
           />
           <OrderStatusItem
             icon="🚚"
-            status="Shipped"
-            subStatus="Đang giao"
+            status="SHIPPED"
+            subStatus="Đã giao ĐVVC"
             count="2,156"
             bgClass="bg-purple-50"
             borderClass="border-purple-200"
@@ -591,8 +579,8 @@ const DashboardContent = () => (
           />
           <OrderStatusItem
             icon="✅"
-            status="Delivered"
-            subStatus="Đã giao"
+            status="COMPLETED"
+            subStatus="Hoàn tất"
             count="4,789"
             bgClass="bg-green-50"
             borderClass="border-green-200"
@@ -601,7 +589,7 @@ const DashboardContent = () => (
           />
           <OrderStatusItem
             icon="❌"
-            status="Cancelled"
+            status="CANCELLED"
             subStatus="Đã hủy"
             count="289"
             bgClass="bg-red-50"
@@ -611,8 +599,8 @@ const DashboardContent = () => (
           />
           <OrderStatusItem
             icon="↩️"
-            status="Returned"
-            subStatus="Đã hoàn trả"
+            status="RETURN_REQUESTED"
+            subStatus="Yêu cầu trả hàng"
             count="124"
             bgClass="bg-orange-50"
             borderClass="border-orange-200"
@@ -1142,6 +1130,7 @@ const DashboardContent = () => (
 // Component chính bây giờ hỗ trợ children để dùng làm layout (persist header/sidebar)
 const App = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuthStore();
   const [activePage, setActivePage] = useState("Tổng quan");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -1212,14 +1201,24 @@ const App = () => {
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-4">
-          {navItems.map((item, index) => (
-            <NavItem
-              key={index}
-              {...item}
-              active={activePage === item.label}
-              onClick={() => setActivePage(item.label)}
-            />
-          ))}
+          {navItems.map((item, index) => {
+            const { path: navPath, ...rest } = item;
+            return (
+              <NavItem
+                key={index}
+                {...rest}
+                active={
+                  navPath
+                    ? location.pathname.startsWith(navPath)
+                    : activePage === item.label
+                }
+                onClick={() => {
+                  if (navPath) navigate(navPath);
+                  else setActivePage(item.label);
+                }}
+              />
+            );
+          })}
         </nav>
 
         <div className="border-t border-gray-200 p-4">
@@ -1279,11 +1278,6 @@ const App = () => {
               <button className="relative rounded-lg p-2.5 text-gray-600 transition hover:bg-gray-100">
                 <span className="text-xl">🔔</span>
                 <span className={CUSTOM_CLASSES.notificationDot}></span>
-              </button>
-              <button
-                className={`px-5 py-2.5 ${CUSTOM_CLASSES.gradientOrange} rounded-lg text-sm font-medium text-white transition hover:opacity-90`}
-              >
-                Xuất báo cáo
               </button>
             </div>
           </div>

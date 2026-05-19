@@ -19,5 +19,7 @@ router.use(authMiddleware)
 
 // Protected routes - Cần authentication
 router.get('/me', authController.getMe)
+router.patch('/me', authController.updateMe)
+router.post('/change-password', authController.changePassword)
 
 export default router

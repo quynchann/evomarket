@@ -4,6 +4,7 @@
  */
 
 import { SYSTEM_EVENTS, ROOMS } from '../socket.constants.js'
+import { getUnreadCountForUser } from '../../services/notification.service.js'
 
 // Map lưu trữ online users: userId -> Set of socketIds
 // Để tracking người dùng mở nhiều tab
@@ -34,11 +35,27 @@ export const setupSystemNamespace = (systemNamespace) => {
 
     socket.join([personalRoom, roleRoom, globalRoom])
 
+    socket.emit(SYSTEM_EVENTS.PRESENCE_SYNC, {
+      userIds: getOnlineUserIds(),
+      timestamp: new Date().toISOString(),
+    })
+
     console.log(`[/system] User ${user.id} joined rooms:`, {
       personal: personalRoom,
       role: roleRoom,
       global: globalRoom
     })
+
+    getUnreadCountForUser(user.id)
+      .then((unreadCount) => {
+        socket.emit(SYSTEM_EVENTS.NOTIFICATION_UNREAD_UPDATE, {
+          unreadCount,
+          timestamp: new Date().toISOString(),
+        })
+      })
+      .catch((err) => {
+        console.error('[/system] Unread count:', err?.message || err)
+      })
 
     // Nếu đây là socket đầu tiên của user này -> báo online
     if (onlineUsers.get(user.id).size === 1) {

@@ -318,55 +318,6 @@ export default function NotificationSettings() {
               ))}
             </div>
           </div>
-
-          {/* Quick Actions */}
-          <div className="rounded-2xl bg-white p-6 shadow-md">
-            <h3 className="mb-4 text-lg font-semibold text-gray-800">
-              Hành động nhanh
-            </h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <button
-                onClick={() => {
-                  const newSettings = { ...notificationSettings }
-                  Object.keys(newSettings).forEach((key) => {
-                    if (
-                      key.startsWith('order') ||
-                      key.startsWith('promotion') ||
-                      key.startsWith('product') ||
-                      key.startsWith('review')
-                    ) {
-                      newSettings[key] = true
-                    }
-                  })
-                  setNotificationSettings(newSettings)
-                  // TODO: Call API to save
-                  console.log('Auto-saving: Enable all notifications')
-                }}
-                className="rounded-lg border-2 border-green-300 bg-green-50 px-4 py-3 text-sm font-medium text-green-700 transition hover:bg-green-100">
-                ✓ Bật tất cả thông báo
-              </button>
-              <button
-                onClick={() => {
-                  const newSettings = { ...notificationSettings }
-                  Object.keys(newSettings).forEach((key) => {
-                    if (
-                      key.startsWith('order') ||
-                      key.startsWith('promotion') ||
-                      key.startsWith('product') ||
-                      key.startsWith('review')
-                    ) {
-                      newSettings[key] = false
-                    }
-                  })
-                  setNotificationSettings(newSettings)
-                  // TODO: Call API to save
-                  console.log('Auto-saving: Disable all notifications')
-                }}
-                className="rounded-lg border-2 border-gray-300 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-100">
-                ✕ Tắt tất cả thông báo
-              </button>
-            </div>
-          </div>
         </div>
       </main>
     </div>

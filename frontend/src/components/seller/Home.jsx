@@ -1,14 +1,67 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Chart } from "chart.js/auto";
 import { toast } from "sonner";
+import { chatApi, chatQueryKeys } from "../../services/chatApi.js";
+import { orderApi } from "../../services/orderApi.js";
+import { useAuthStore } from "../../stores/useAuthStore.js";
+
+function formatBriefVnd(vnd) {
+  const v = Number(vnd) || 0;
+  if (v >= 1_000_000_000) {
+    return `${(v / 1_000_000_000).toFixed(1).replace(".", ",")} tỷ ₫`;
+  }
+  if (v >= 1_000_000) {
+    return `${(v / 1_000_000).toFixed(1).replace(".", ",")} triệu ₫`;
+  }
+  return `${new Intl.NumberFormat("vi-VN").format(v)} ₫`;
+}
+
+function formatCount(n) {
+  return new Intl.NumberFormat("vi-VN").format(Number(n) || 0);
+}
 
 export default function Home() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const shopDisplay =
+    (user?.shop_name && String(user.shop_name).trim()) ||
+    user?.fullname ||
+    "Shop";
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
   const orderChartRef = useRef(null);
   const orderChartInstance = useRef(null);
+
+  const {
+    data: todayStats,
+    isLoading: statsLoading,
+    isError: statsError,
+  } = useQuery({
+    queryKey: ["seller-today-stats"],
+    queryFn: async () => {
+      const res = await orderApi.sellerTodayStats();
+      return res.data;
+    },
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
+  });
+
+  const {
+    data: unreadChatCount,
+    isLoading: unreadChatLoading,
+  } = useQuery({
+    queryKey: chatQueryKeys.unreadCount,
+    queryFn: async () => {
+      const res = await chatApi.getUnreadCount();
+      return Number(res.data?.unreadCount ?? 0) || 0;
+    },
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
+  });
 
   // Biểu đồ doanh thu (Line Chart)
   useEffect(() => {
@@ -79,14 +132,23 @@ export default function Home() {
     return () => orderChartInstance.current?.destroy();
   }, []);
 
-  const quickActions = [
-    { icon: "📦", text: "Quản lý đơn hàng", badge: "15 đơn mới", path: "/seller/orders" },
-    { icon: "📝", text: "Thêm sản phẩm", path: "/seller/products" },
-    { icon: "🎯", text: "Marketing", path: null },
-    { icon: "💬", text: "Chat với khách", badge: "8 tin nhắn", path: "/seller/chat" },
-    { icon: "🎁", text: "Khuyến mãi", path: null },
-    { icon: "📊", text: "Báo cáo", path: null },
-  ];
+  const quickActions = useMemo(() => {
+    const ordersBadge =
+      statsLoading && todayStats == null
+        ? "…"
+        : `${formatCount(todayStats?.ordersToday ?? 0)} đơn mới`;
+    const chatBadge =
+      unreadChatLoading && unreadChatCount === undefined
+        ? "…"
+        : `${formatCount(unreadChatCount ?? 0)} tin nhắn`;
+    return [
+      { icon: "📦", text: "Quản lý đơn hàng", badge: ordersBadge, path: "/seller/orders" },
+      { icon: "📝", text: "Quản lý sản phẩm", path: "/seller/products" },
+      { icon: "💬", text: "Chat với khách", badge: chatBadge, path: "/seller/chat" },
+      { icon: "🎁", text: "Khuyến mãi", path: "/seller/coupons" },
+      { icon: "📊", text: "Báo cáo", path: "/seller/reports" },
+    ];
+  }, [statsLoading, todayStats, unreadChatLoading, unreadChatCount]);
 
   const handleQuickAction = (action) => {
     if (action.path) {
@@ -97,40 +159,83 @@ export default function Home() {
   };
 
   return (
-    <div className="px-6 py-8">
+    <div className="px-4 py-6 sm:px-6 sm:py-8">
       {/* Welcome Section */}
-      <div className="mb-8 flex justify-between rounded-2xl bg-gradient-to-r from-orange-400 to-orange-600 p-6 text-white shadow-md">
-        <div className="flex items-center space-x-4">
+      <div className="mb-8 flex flex-col gap-4 rounded-2xl bg-gradient-to-r from-orange-400 to-orange-600 p-4 text-white shadow-md sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex items-center gap-3 sm:space-x-4">
           <img
             src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60"
             alt="shop"
-            className="h-14 w-14 rounded-full border-2 border-white"
+            className="h-12 w-12 shrink-0 rounded-full border-2 border-white sm:h-14 sm:w-14"
           />
-          <div>
-            <h2 className="text-2xl font-bold">
-              Chào mừng trở lại, Bunny Store!
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold sm:text-2xl">
+              Chào mừng trở lại, {shopDisplay}!
             </h2>
-            <p className="text-orange-100">
-              Hôm nay bạn có <b>15 đơn hàng mới</b> và{" "}
-              <b>8 tin nhắn chưa đọc</b>
+            <p className="text-sm text-orange-100 sm:text-base">
+              Hôm nay bạn có{" "}
+              <b>
+                {statsLoading && todayStats == null
+                  ? "…"
+                  : `${formatCount(todayStats?.ordersToday ?? 0)} đơn hàng mới`}
+              </b>{" "}
+              và{" "}
+              <b>
+                {unreadChatLoading && unreadChatCount === undefined
+                  ? "…"
+                  : `${formatCount(unreadChatCount ?? 0)} tin nhắn chưa đọc`}
+              </b>
             </p>
           </div>
         </div>
-        <div className="flex space-x-6">
+        <div className="flex justify-around gap-4 border-t border-white/20 pt-4 sm:flex-initial sm:justify-start sm:border-t-0 sm:space-x-6 sm:border-none sm:pt-0">
           <div className="text-center">
-            <div className="text-2xl font-bold">4.8⭐</div>
-            <div className="text-sm text-orange-100">Đánh giá shop</div>
+            <div
+              className={`text-xl font-bold tabular-nums sm:text-2xl ${statsLoading ? "opacity-70" : ""}`}
+            >
+              {statsLoading && todayStats == null
+                ? "…"
+                : todayStats?.ratingSummary?.average != null
+                  ? `${Number(todayStats.ratingSummary.average).toFixed(1)}⭐`
+                  : "—"}
+            </div>
+            <div className="text-xs text-orange-100 sm:text-sm">Đánh giá shop</div>
+            <div className="mt-0.5 text-[10px] text-orange-100/90 sm:text-xs">
+              {statsLoading && todayStats == null
+                ? " "
+                : (todayStats?.ratingSummary?.count ?? 0) > 0
+                  ? `${formatCount(todayStats.ratingSummary.count)} lượt`
+                  : "Chưa có lượt đánh giá"}
+            </div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold">1,234</div>
-            <div className="text-sm text-orange-100">Người theo dõi</div>
+            <div
+              className={`text-xl font-bold tabular-nums sm:text-2xl ${statsLoading ? "opacity-70" : ""}`}
+            >
+              {statsLoading && todayStats == null
+                ? "…"
+                : formatCount(todayStats?.followerCount ?? 0)}
+            </div>
+            <div className="text-xs text-orange-100 sm:text-sm">Người theo dõi</div>
           </div>
         </div>
       </div>
 
-      <h1 className="mb-6 text-2xl font-semibold text-gray-800">
-        Tổng quan hoạt động
-      </h1>
+      <div className="mb-2">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <h1 className="text-xl font-semibold text-gray-800 sm:text-2xl">
+            Tổng quan hoạt động
+          </h1>
+          <p className="text-xs text-gray-500 sm:text-sm">
+            Làm mới số liệu ~15 giây/lần (gần thời gian thực).
+          </p>
+        </div>
+        {statsError ? (
+          <p className="mt-1 text-xs text-red-600">
+            Không tải được thống kê; hệ thống sẽ thử lại tự động.
+          </p>
+        ) : null}
+      </div>
 
       {/* --- Thống kê nhanh --- */}
       <div className="mb-10 grid grid-cols-1 gap-6 sm:grid-cols-3">
@@ -139,7 +244,16 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm opacity-90">Doanh thu hôm nay</p>
-              <h2 className="mt-1 text-2xl font-bold">4.2 triệu ₫</h2>
+              <h2
+                className={`mt-1 text-2xl font-bold tabular-nums ${statsLoading ? "opacity-70" : ""}`}
+              >
+                {statsLoading && !todayStats
+                  ? "…"
+                  : formatBriefVnd(todayStats?.revenueVnd ?? 0)}
+              </h2>
+              <p className="mt-1 text-[11px] opacity-80 sm:text-xs">
+                Đơn đã xác nhận trở đi (GMV dòng hàng)
+              </p>
             </div>
             <span className="text-3xl">💰</span>
           </div>
@@ -150,18 +264,33 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm opacity-90">Đơn hàng hôm nay</p>
-              <h2 className="mt-1 text-2xl font-bold">126</h2>
+              <h2
+                className={`mt-1 text-2xl font-bold tabular-nums ${statsLoading ? "opacity-70" : ""}`}
+              >
+                {statsLoading && !todayStats
+                  ? "…"
+                  : formatCount(todayStats?.ordersToday ?? 0)}
+              </h2>
             </div>
             <span className="text-3xl">📦</span>
           </div>
         </div>
 
-        {/* Khách truy cập */}
+        {/* Khách truy cập — lượt xem sản phẩm shop (unique/ngày) */}
         <div className="rounded-2xl bg-gradient-to-r from-orange-400 to-orange-500 p-5 text-white shadow-md transition hover:shadow-lg">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm opacity-90">Khách truy cập</p>
-              <h2 className="mt-1 text-2xl font-bold">3,842</h2>
+              <h2
+                className={`mt-1 text-2xl font-bold tabular-nums ${statsLoading ? "opacity-70" : ""}`}
+              >
+                {statsLoading && !todayStats
+                  ? "…"
+                  : formatCount(todayStats?.visitorsToday ?? 0)}
+              </h2>
+              <p className="mt-1 text-[11px] opacity-80 sm:text-xs">
+                Khách mở trang sản phẩm của shop (mỗi tài khoản hoặc trình duyệt đếm một lần/ngày)
+              </p>
             </div>
             <span className="text-3xl">👥</span>
           </div>
@@ -171,12 +300,12 @@ export default function Home() {
       {/* Chart Section - 2 biểu đồ song song */}
       <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Biểu đồ Doanh thu */}
-        <div className="rounded-2xl bg-white p-6 shadow">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-xl font-semibold text-gray-800">
+        <div className="rounded-2xl bg-white p-4 shadow sm:p-6">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-lg font-semibold text-gray-800 sm:text-xl">
               Doanh thu 7 ngày
             </h3>
-            <select className="rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 focus:outline-none">
+            <select className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 focus:outline-none sm:w-auto">
               <option>7 ngày qua</option>
               <option>30 ngày qua</option>
               <option>3 tháng qua</option>
@@ -188,12 +317,12 @@ export default function Home() {
         </div>
 
         {/* Biểu đồ Đơn hàng */}
-        <div className="rounded-2xl bg-white p-6 shadow">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-xl font-semibold text-gray-800">
+        <div className="rounded-2xl bg-white p-4 shadow sm:p-6">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-lg font-semibold text-gray-800 sm:text-xl">
               Đơn hàng 7 ngày
             </h3>
-            <select className="rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 focus:outline-none">
+            <select className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 focus:outline-none sm:w-auto">
               <option>7 ngày qua</option>
               <option>30 ngày qua</option>
               <option>3 tháng qua</option>
@@ -206,19 +335,19 @@ export default function Home() {
       </div>
 
       {/* Quick Actions */}
-      <div className="mb-10 rounded-2xl bg-white p-6 shadow">
-        <h3 className="mb-6 text-xl font-semibold text-gray-800">
+      <div className="mb-10 rounded-2xl bg-white p-4 shadow sm:p-6">
+        <h3 className="mb-4 text-lg font-semibold text-gray-800 sm:mb-6 sm:text-xl">
           Công cụ quản lý nhanh
         </h3>
-        <div className="grid grid-cols-6 gap-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
           {quickActions.map((action, i) => (
             <button
               key={i}
               onClick={() => handleQuickAction(action)}
-              className="cursor-pointer rounded-xl border border-gray-100 bg-gray-50 p-5 text-center shadow-sm transition hover:bg-gray-100 hover:shadow-md"
+              className="cursor-pointer rounded-xl border border-gray-100 bg-gray-50 p-3 text-center shadow-sm transition hover:bg-gray-100 hover:shadow-md sm:p-5"
             >
-              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
-                <span className="text-3xl">{action.icon}</span>
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 sm:mb-3 sm:h-16 sm:w-16">
+                <span className="text-2xl sm:text-3xl">{action.icon}</span>
               </div>
               <span className="text-sm font-medium text-gray-700">
                 {action.text}
@@ -232,11 +361,12 @@ export default function Home() {
       </div>
 
       {/* Orders Section */}
-      <div className="mb-10 rounded-2xl bg-white p-6 shadow">
-        <h3 className="mb-6 text-xl font-semibold text-gray-800">
+      <div className="mb-10 rounded-2xl bg-white p-4 shadow sm:p-6">
+        <h3 className="mb-4 text-lg font-semibold text-gray-800 sm:mb-6 sm:text-xl">
           Đơn hàng cần xử lý
         </h3>
-        <table className="min-w-full border">
+        <div className="-mx-4 overflow-x-auto sm:mx-0">
+        <table className="min-w-[560px] w-full border">
           <thead className="bg-gray-100">
             <tr>
               {[
@@ -248,7 +378,7 @@ export default function Home() {
               ].map((head, i) => (
                 <th
                   key={i}
-                  className="px-4 py-2 text-left text-sm font-medium text-gray-700"
+                  className="px-3 py-2 text-left text-xs font-medium text-gray-700 sm:px-4 sm:text-sm"
                 >
                   {head}
                 </th>
@@ -280,25 +410,26 @@ export default function Home() {
               },
             ].map((o, i) => (
               <tr key={i} className="border-t hover:bg-gray-50">
-                <td className="px-4 py-2 text-sm">{o.id}</td>
-                <td className="px-4 py-2 text-sm">{o.name}</td>
-                <td className="px-4 py-2 text-sm">{o.date}</td>
-                <td className="px-4 py-2 text-sm">{o.total}</td>
-                <td className="px-4 py-2 text-sm font-medium text-orange-600">
+                <td className="px-3 py-2 text-xs sm:px-4 sm:text-sm">{o.id}</td>
+                <td className="px-3 py-2 text-xs sm:px-4 sm:text-sm">{o.name}</td>
+                <td className="px-3 py-2 text-xs sm:px-4 sm:text-sm">{o.date}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-xs sm:px-4 sm:text-sm">{o.total}</td>
+                <td className="px-3 py-2 text-xs font-medium whitespace-nowrap text-orange-600 sm:px-4 sm:text-sm">
                   {o.status}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Top Products */}
-      <div className="mb-12 rounded-2xl bg-white p-6 shadow">
-        <h3 className="mb-6 text-xl font-semibold text-gray-800">
+      <div className="mb-12 rounded-2xl bg-white p-4 shadow sm:p-6">
+        <h3 className="mb-4 text-lg font-semibold text-gray-800 sm:mb-6 sm:text-xl">
           Sản phẩm bán chạy
         </h3>
-        <div className="grid grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 sm:gap-6">
           {[
             {
               img: "https://tnj.vn/56584-large_default/khuyen-tai-bac-nu-hoa-5-canh-dinh-da-btn0220.jpg",

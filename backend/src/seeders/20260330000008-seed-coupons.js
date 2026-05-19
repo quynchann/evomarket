@@ -13,7 +13,8 @@ module.exports = {
         max_uses: 1000,
         used_count: 25,
         start_date: new Date('2026-01-01'),
-        end_date: new Date('2026-12-31')
+        end_date: new Date('2026-12-31'),
+        new_user_only: true
       },
       {
         id: 2,
@@ -24,7 +25,8 @@ module.exports = {
         max_uses: 500,
         used_count: 12,
         start_date: new Date('2026-03-01'),
-        end_date: new Date('2026-06-30')
+        end_date: new Date('2026-06-30'),
+        new_user_only: false
       },
       {
         id: 3,
@@ -35,7 +37,8 @@ module.exports = {
         max_uses: 2000,
         used_count: 150,
         start_date: new Date('2026-01-01'),
-        end_date: new Date('2026-12-31')
+        end_date: new Date('2026-12-31'),
+        new_user_only: false
       },
       {
         id: 4,
@@ -46,7 +49,8 @@ module.exports = {
         max_uses: 100,
         used_count: 8,
         start_date: new Date('2026-03-15'),
-        end_date: new Date('2026-04-15')
+        end_date: new Date('2026-04-15'),
+        new_user_only: false
       }
     ]
 

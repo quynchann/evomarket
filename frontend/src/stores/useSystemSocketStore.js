@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { io } from 'socket.io-client'
 import { NAMESPACES, SYSTEM_EVENTS } from '@/sockets/socket.constants'
+import { queryClient } from '@/queryClient'
 import { toast } from 'sonner'
 import { useAuthStore } from './useAuthStore'
 
@@ -18,7 +19,6 @@ export const useSystemSocketStore = create((set, get) => ({
   isConnecting: false,
   onlineUsers: new Set(),
   unreadCount: 0,
-  notifications: [],
 
   isUserOnline: (userId) => {
     const id = Number(userId)
@@ -40,6 +40,16 @@ export const useSystemSocketStore = create((set, get) => ({
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+    })
+
+    socket.on(SYSTEM_EVENTS.PRESENCE_SYNC, ({ userIds }) => {
+      if (!Array.isArray(userIds)) return
+      const next = new Set()
+      for (const raw of userIds) {
+        const id = Number(raw)
+        if (Number.isFinite(id)) next.add(id)
+      }
+      set({ onlineUsers: next })
     })
 
     socket.on('connect', () => {
@@ -80,16 +90,60 @@ export const useSystemSocketStore = create((set, get) => ({
 
     socket.on(SYSTEM_EVENTS.NOTIFICATION_NEW, (notification) => {
       console.log('[System Socket] New notification:', notification)
-      set((state) => ({
-        notifications: [
-          { ...notification, receivedAt: new Date().toISOString() },
-          ...state.notifications,
-        ].slice(0, 50),
-      }))
-      toast.success(notification?.title || 'Thông báo', {
-        description: notification?.message,
-        duration: 5000,
-      })
+      queryClient.invalidateQueries({ queryKey: ['user-notifications'] })
+      const role = useAuthStore.getState().user?.role
+      if (
+        role === 'seller' &&
+        typeof notification?.type === 'string' &&
+        notification.type.includes('order')
+      ) {
+        queryClient.invalidateQueries({ queryKey: ['seller-today-stats'] })
+      }
+      if (notification?.type !== 'order_status') {
+        toast.success(notification?.title || 'Thông báo', {
+          description: notification?.message,
+          duration: 5000,
+        })
+      }
+    })
+
+    socket.on(SYSTEM_EVENTS.ORDER_STATUS_UPDATED, (payload) => {
+      queryClient.invalidateQueries({ queryKey: ['buyer-orders'] })
+      const oid = payload?.orderId
+      if (oid != null && oid !== '') {
+        const n = Number(oid)
+        if (Number.isFinite(n)) {
+          queryClient.invalidateQueries({ queryKey: ['buyer-order', n] })
+        }
+      }
+      const title = payload?.title || 'Cập nhật đơn hàng'
+      const description = payload?.message
+      if (payload?.status === 'CANCELLED') {
+        toast.error(title, { description, duration: 5500 })
+      } else {
+        toast.success(title, { description, duration: 5000 })
+      }
+    })
+
+    socket.on(SYSTEM_EVENTS.SELLER_TODAY_STATS, (payload) => {
+      if (useAuthStore.getState().user?.role !== 'seller') return
+      if (
+        payload &&
+        typeof payload.revenueVnd === 'number' &&
+        typeof payload.ordersToday === 'number' &&
+        typeof payload.visitorsToday === 'number' &&
+        typeof payload.followerCount === 'number'
+      ) {
+        queryClient.setQueryData(['seller-today-stats'], (old) => ({
+          revenueVnd: payload.revenueVnd,
+          ordersToday: payload.ordersToday,
+          visitorsToday: payload.visitorsToday,
+          followerCount: payload.followerCount,
+          ratingSummary:
+            payload.ratingSummary ??
+            old?.ratingSummary ?? { average: null, count: 0 },
+        }))
+      }
     })
 
     socket.on(SYSTEM_EVENTS.NOTIFICATION_UNREAD_UPDATE, ({ unreadCount }) => {
@@ -120,7 +174,6 @@ export const useSystemSocketStore = create((set, get) => ({
         isConnecting: false,
         onlineUsers: new Set(),
         unreadCount: 0,
-        notifications: [],
       })
     }
   },

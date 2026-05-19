@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "../../../stores/useAuthStore";
@@ -11,6 +11,7 @@ import { Eye, EyeOff } from "lucide-react";
 
 export const CustomerLogin = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -32,7 +33,11 @@ export const CustomerLogin = () => {
     },
     onSuccess: () => {
       toast.success("Đăng nhập thành công!");
-      navigate("/customer/homepage");
+      const from =
+        typeof location.state?.from === "string"
+          ? location.state.from
+          : null;
+      navigate(from && from.startsWith("/customer") ? from : "/customer/homepage");
     },
     onError: (error) => {
       console.log(error); 

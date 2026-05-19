@@ -10,6 +10,7 @@ module.exports = (sequelize, DataTypes) => {
         as: "Seller",
         foreignKey: "seller_id",
       });
+      OrderItem.hasOne(models.Review, { foreignKey: "order_item_id" });
     }
   }
   OrderItem.init(
