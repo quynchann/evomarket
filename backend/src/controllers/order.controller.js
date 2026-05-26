@@ -49,7 +49,13 @@ export const getOrderDetail = async (req, res, next) => {
 export const getBuyerOrders = async (req, res, next) => {
   try {
     const userId = req.user.id
-    const { page = 1, limit = 10, status } = req.query
+    const { page = 1, limit = 10 } = req.query
+    let { status } = req.query
+
+    // Hỗ trợ nhiều status: ?status=A&status=B hoặc ?status=A
+    if (status) {
+      status = Array.isArray(status) ? status : [status]
+    }
 
     const orders = await orderService.getBuyerOrders(userId, { page, limit, status })
 
@@ -139,7 +145,8 @@ export const getAllOrders = async (req, res, next) => {
 /**
  * Cập nhật trạng thái đơn hàng (Seller)
  * PATCH /api/orders/:id/status
- * Body: { status, carrier_name?, tracking_number?, note? } — tracking_number bỏ qua/để trống → backend tự tạo EVO-…
+ * Body: { status, carrier_name?, tracking_number?, note? } — carrier_name và tracking_number bắt buộc khi chuyển sang SHIPPED.
+ * Mã vận đơn do bên vận chuyển cung cấp, người bán nhập thủ công.
  */
 export const updateOrderStatus = async (req, res, next) => {
   try {

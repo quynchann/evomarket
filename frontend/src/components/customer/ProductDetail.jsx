@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import * as productApi from "../../services/productApi";
 import { reviewApi } from "../../services/reviewApi.js";
 import { cartApi, syncCartQueryAfterMutation } from "../../services/cartApi";
+import { shopApi } from "../../services/shopApi";
 import { useAuthStore } from "../../stores/useAuthStore";
 
 export default function ProductDetail() {
@@ -26,7 +27,7 @@ export default function ProductDetail() {
     },
   });
 
-  /** Mua ngay: chuẩn hóa 1 dòng giờ hàng đúng số lượng PDP rồi sang checkout chỉ cho dòng đó */
+  /** Mua ngay: thêm vào giỏ hàng rồi chuyển sang trang giỏ hàng để chọn voucher */
   const buyNowMutation = useMutation({
     mutationFn: async () => {
       const productIdNum = Number(id);
@@ -58,11 +59,14 @@ export default function ProductDetail() {
           Number(ci.productId) === productIdNum &&
           (ci.variantId == null || ci.variantId === ""),
       );
-      if (!line?.id) {
-        toast.error("Không lấy được dòng đơn để thanh toán");
-        return;
-      }
-      navigate("/customer/checkout", { state: { lineIds: [line.id] } });
+      toast.success("Đã thêm vào giỏ hàng");
+      // Chuyển sang trang giỏ hàng với thông tin sản phẩm cần mua
+      navigate("/customer/cart", { 
+        state: { 
+          buyNowMode: true,
+          selectedItemId: line?.id 
+        } 
+      });
     },
     onError: (err) => {
       toast.error(err.message || "Không thể thực hiện Mua ngay");
@@ -89,6 +93,17 @@ export default function ProductDetail() {
 
   const publicReviews = reviewsPayload?.reviews ?? [];
   const ratingSummary = product?.ratingSummary ?? { average: null, count: 0 };
+
+  // Fetch shop data to get shop rating
+  const { data: shopData } = useQuery({
+    queryKey: ["shop-info", product?.seller?.id],
+    queryFn: () => shopApi.getShop(product.seller.id),
+    enabled: Boolean(product?.seller?.id),
+  });
+
+  const shopPayload = shopData?.data;
+  const shopRating = shopPayload?.ratingSummary?.average;
+  const shopRatingCount = shopPayload?.ratingSummary?.count ?? 0;
 
   useEffect(() => {
     if (!id || !product?.id) return;
@@ -377,9 +392,9 @@ export default function ProductDetail() {
               </button>
             </div>
 
-            {/* Seller Info */}
+            {/* Shop Info */}
             <div className="rounded-xl border-2 border-gray-200 bg-white p-6">
-              <h3 className="mb-3 font-semibold text-gray-900">Thông tin người bán</h3>
+              <h3 className="mb-3 font-semibold text-gray-900">Thông tin cửa hàng</h3>
               <button
                 type="button"
                 onClick={() =>
@@ -388,13 +403,26 @@ export default function ProductDetail() {
                 className="flex w-full cursor-pointer items-center gap-4 rounded-lg text-left outline-none ring-orange-400 transition hover:bg-orange-50/80 focus-visible:ring-2"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-100">
-                  <span className="text-2xl">👤</span>
+                  <span className="text-2xl">🏪</span>
                 </div>
-                <div>
-                  <p className="font-semibold text-gray-900">
-                    {product.seller.shopName || product.seller.fullname}
-                  </p>
-                  <p className="text-sm text-gray-500">Cửa hàng — xem trang shop</p>
+                <div className="flex flex-1 items-center justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {product.seller.shopName || product.seller.fullname}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">Nhấn để xem trang shop</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 text-sm">
+                    <div className="flex items-center gap-1">
+                      <span className="text-yellow-500">⭐</span>
+                      <span className="font-medium text-gray-700">
+                        {shopRating != null ? Number(shopRating).toFixed(1) : "—"}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {new Intl.NumberFormat("vi-VN").format(shopRatingCount)} đánh giá
+                    </span>
+                  </div>
                 </div>
               </button>
             </div>

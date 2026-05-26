@@ -36,7 +36,6 @@ import CustomerAddress from "./components/customer/CustomerAddress.jsx";
 import NotificationSettings from "./components/customer/NotificationSettings.jsx";
 import SystemNotifications from "./components/customer/SystemNotifications.jsx";
 import PrivacySettings from "./components/customer/PrivacySettings.jsx";
-import PersonalInfo from "./components/customer/PersonalInfo.jsx";
 import Cart from "./components/customer/Cart.jsx";
 import Checkout from "./components/customer/Checkout.jsx";
 import OrderSuccess from "./components/customer/OrderSuccess.jsx";
@@ -59,6 +58,7 @@ import SellerNotifications from "./components/seller/SellerNotifications.jsx";
 import SellerReports from "./components/seller/SellerReports.jsx";
 import SellerSupport from "./components/seller/SellerSupport.jsx";
 import CustomerSupport from "./components/customer/CustomerSupport.jsx";
+import SearchProducts from "./components/customer/SearchProducts.jsx";
 
 const router = createBrowserRouter([
   {
@@ -77,6 +77,7 @@ const router = createBrowserRouter([
         element: <CustomerLayout />,
         children: [
           { path: "customer/homepage", Component: Homepage },
+          { path: "customer/search", Component: SearchProducts },
           {
             path: "customer/categories/:categoryId",
             Component: CategoryProducts,
@@ -138,7 +139,6 @@ const router = createBrowserRouter([
                 Component: NotificationSettings,
               },
               { path: "customer/privacy-settings", Component: PrivacySettings },
-              { path: "customer/personal-info", Component: PersonalInfo },
               { path: "customer/cart", Component: Cart },
               { path: "customer/checkout", Component: Checkout },
               { path: "customer/order-success/:orderId", Component: OrderSuccess },

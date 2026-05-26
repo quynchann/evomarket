@@ -19,7 +19,7 @@ Cú pháp: `[phân_loại]:[ID_tuỳ_chọn]`
 | Namespace | Loại Phòng (Object Key) | Cú pháp Room        | Ví dụ thực tế      | Mục đích                                                  |
 | :-------- | :---------------------- | :------------------ | :----------------- | :-------------------------------------------------------- |
 | `/system` | `PERSONAL`              | `user:{id}`         | `user:123`         | Thông báo đích danh (Báo cho người dùng cụ thể)           |
-| `/system` | `ROLE`                  | `role:{role}`       | `role:doctor`      | Thông báo tập thể (Báo cho toàn bộ seller hoặc customers) |
+| `/system` | `ROLE`                  | `role:{role}`       | `role:seller`      | Thông báo tập thể (Báo cho toàn bộ seller hoặc customers) |
 | `/system` | `GLOBAL`                | `system:global`     | `system:global`    | Báo bảo trì server cho tất cả mọi người.                  |
 | `/chat`   | `CONVERSATION`          | `conversation:{id}` | `conversation:abc` | Gửi tin nhắn trong 1 cuộc hội thoại.                      |
 

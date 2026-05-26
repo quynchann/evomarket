@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import {
   Bell,
   Mail,
@@ -8,51 +9,80 @@ import {
   Star,
   ShoppingBag,
 } from 'lucide-react'
+import { notificationApi } from '../../services/notificationApi'
+
+const notificationSettingsQueryKey = ['notificationSettings']
+
+/** Khớp với backend `DEFAULT_NOTIFICATION_PREFERENCES` (notification.service.js). */
+const DEFAULT_NOTIFICATION_SETTINGS = {
+  orderConfirmed: true,
+  orderPreparing: true,
+  orderShipped: true,
+  orderDelivered: true,
+  orderCancelled: true,
+  promotions: true,
+  newVouchers: true,
+  flashSale: true,
+  exclusiveDeals: false,
+  newProducts: false,
+  productRestock: true,
+  priceDrops: true,
+  wishlistUpdates: true,
+  reviewReminder: true,
+  reviewReplies: true,
+  emailNotifications: true,
+  smsNotifications: false,
+  pushNotifications: true,
+}
 
 export default function NotificationSettings() {
-  const [notificationSettings, setNotificationSettings] = useState({
-    // Thông báo đơn hàng
-    orderConfirmed: true,
-    orderPreparing: true,
-    orderShipped: true,
-    orderDelivered: true,
-    orderCancelled: true,
+  const queryClient = useQueryClient()
 
-    // Thông báo khuyến mãi
-    promotions: true,
-    newVouchers: true,
-    flashSale: true,
-    exclusiveDeals: false,
-
-    // Thông báo sản phẩm
-    newProducts: false,
-    productRestock: true,
-    priceDrops: true,
-    wishlistUpdates: true,
-
-    // Thông báo đánh giá
-    reviewReminder: true,
-    reviewReplies: true,
-
-    // Kênh nhận thông báo
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
+  const { data, isPending, isError, refetch } = useQuery({
+    queryKey: notificationSettingsQueryKey,
+    queryFn: async () => {
+      const res = await notificationApi.getSettings()
+      return res.data
+    },
   })
 
-  const handleToggle = (key) => {
-    setNotificationSettings((prev) => {
-      const newSettings = {
-        ...prev,
-        [key]: !prev[key],
+  const mutation = useMutation({
+    mutationFn: (patch) => notificationApi.updateSettings(patch),
+    onMutate: async (patch) => {
+      await queryClient.cancelQueries({
+        queryKey: notificationSettingsQueryKey,
+      })
+      const previous = queryClient.getQueryData(notificationSettingsQueryKey)
+      queryClient.setQueryData(
+        notificationSettingsQueryKey,
+        (old) => ({
+          ...(old ?? DEFAULT_NOTIFICATION_SETTINGS),
+          ...patch,
+        }),
+      )
+      return { previous }
+    },
+    onError: (err, _patch, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(
+          notificationSettingsQueryKey,
+          context.previous,
+        )
       }
+      toast.error(err?.message || 'Không thể lưu cài đặt')
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: notificationSettingsQueryKey })
+    },
+  })
 
-      // Auto-save when toggling
-      // TODO: Call API to save notification settings
-      console.log('Auto-saving notification settings:', newSettings)
+  const notificationSettings = data ?? DEFAULT_NOTIFICATION_SETTINGS
+  const controlsDisabled = isPending || mutation.isPending
 
-      return newSettings
-    })
+  const handleToggle = (key) => {
+    if (controlsDisabled) return
+    const next = !notificationSettings[key]
+    mutation.mutate({ [key]: next })
   }
 
   const notificationGroups = [
@@ -200,6 +230,24 @@ export default function NotificationSettings() {
     },
   ]
 
+  if (isError) {
+    return (
+      <div className="w-full">
+        <main className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 px-4 py-6 lg:px-8 lg:py-8">
+          <div className="rounded-2xl bg-white p-6 shadow-md">
+            <p className="text-gray-700">Không tải được cài đặt thông báo.</p>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="mt-4 rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600">
+              Thử lại
+            </button>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full">
       <main className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 px-4 py-6 lg:px-8 lg:py-8">
@@ -211,6 +259,9 @@ export default function NotificationSettings() {
                 <h2 className="mb-2 text-2xl font-bold text-gray-800">
                   Cài đặt thông báo
                 </h2>
+                {isPending ? (
+                  <p className="text-sm text-gray-500">Đang tải...</p>
+                ) : null}
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-100 to-red-100">
                 <Bell className="h-6 w-6 text-orange-600" />
@@ -246,12 +297,14 @@ export default function NotificationSettings() {
                       </p>
                     </div>
                     <button
+                      type="button"
+                      disabled={controlsDisabled}
                       onClick={() => handleToggle(item.key)}
                       className={`relative ml-4 h-6 w-12 shrink-0 rounded-full transition ${
                         notificationSettings[item.key]
                           ? 'bg-orange-500'
                           : 'bg-gray-300'
-                      }`}>
+                      } ${controlsDisabled ? 'cursor-not-allowed opacity-60' : ''}`}>
                       <span
                         className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${
                           notificationSettings[item.key] ? 'right-1' : 'left-1'
@@ -302,12 +355,14 @@ export default function NotificationSettings() {
                     </div>
                   </div>
                   <button
+                    type="button"
+                    disabled={controlsDisabled}
                     onClick={() => handleToggle(channel.key)}
                     className={`relative ml-4 h-6 w-12 shrink-0 rounded-full transition ${
                       notificationSettings[channel.key]
                         ? 'bg-orange-500'
                         : 'bg-gray-300'
-                    }`}>
+                    } ${controlsDisabled ? 'cursor-not-allowed opacity-60' : ''}`}>
                     <span
                       className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${
                         notificationSettings[channel.key] ? 'right-1' : 'left-1'

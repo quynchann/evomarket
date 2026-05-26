@@ -108,9 +108,15 @@ export const getPublicProducts = async (filters = {}) => {
     where.category_id = categoryId
   }
 
-  // Search by title
+  // Search by title (case-insensitive)
   if (search && search.trim()) {
-    where.title = { [Op.like]: `%${search.trim()}%` }
+    where[Op.and] = [
+      sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('title')),
+        'LIKE',
+        `%${search.trim().toLowerCase()}%`
+      )
+    ]
   }
 
   // Price range

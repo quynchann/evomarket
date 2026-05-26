@@ -18,7 +18,7 @@ import { StatusCodes } from 'http-status-codes'
 import crypto from 'crypto'
 import { Op, QueryTypes } from 'sequelize'
 import { lockValidateCouponForOrder } from './coupon.service.js'
-import { emitOrderStatusUpdatedToBuyer } from '../sockets/emitters/system.emitter.js'
+import { emitOrderStatusUpdatedToBuyer, emitProductStockUpdated } from '../sockets/emitters/system.emitter.js'
 import { createAndPushUserNotification } from './notification.service.js'
 import {
   attachReviewsToOrderItemsForBuyer,
@@ -89,27 +89,30 @@ async function appendStatusHistory(
   )
 }
 
-/** Mã nội bộ để shop/khách đối chiếu khi không có mã từ đơn vị vận chuyển. */
-async function allocateSellerTrackingNumber(orderId, transaction) {
-  for (let attempt = 0; attempt < 16; attempt += 1) {
-    const hex = crypto.randomBytes(4).toString('hex').toUpperCase()
-    const code = `EVO-${orderId}-${hex}`
-    const conflict = await Order.findOne({
-      where: {
-        tracking_number: code,
-        id: { [Op.ne]: orderId },
-      },
-      transaction,
-      lock: transaction.LOCK.UPDATE,
-    })
-    if (!conflict) return code
-  }
-  throw new ApiError(
-    StatusCodes.INTERNAL_SERVER_ERROR,
-    'Không tạo được mã vận đơn, vui lòng thử lại',
-    'TRACKING_GEN_FAILED',
-  )
-}
+/**
+ * [DEPRECATED] Không còn tự sinh mã vận đơn nội bộ.
+ * Mã vận đơn phải do bên vận chuyển cung cấp và người bán nhập thủ công.
+ */
+// async function allocateSellerTrackingNumber(orderId, transaction) {
+//   for (let attempt = 0; attempt < 16; attempt += 1) {
+//     const hex = crypto.randomBytes(4).toString('hex').toUpperCase()
+//     const code = `EVO-${orderId}-${hex}`
+//     const conflict = await Order.findOne({
+//       where: {
+//         tracking_number: code,
+//         id: { [Op.ne]: orderId },
+//       },
+//       transaction,
+//       lock: transaction.LOCK.UPDATE,
+//     })
+//     if (!conflict) return code
+//   }
+//   throw new ApiError(
+//     StatusCodes.INTERNAL_SERVER_ERROR,
+//     'Không tạo được mã vận đơn, vui lòng thử lại',
+//     'TRACKING_GEN_FAILED',
+//   )
+// }
 
 async function restoreOrderInventory(orderId, transaction) {
   const lines = await OrderItem.findAll({
@@ -131,23 +134,40 @@ async function restoreOrderInventory(orderId, transaction) {
         lock: transaction.LOCK.UPDATE,
       })
       if (variant) {
+        const newStock = (Number(variant.stock) || 0) + q
         await variant.update(
-          { stock: (Number(variant.stock) || 0) + q },
+          { stock: newStock },
           { transaction },
         )
       }
+      const newSold = Math.max(0, (Number(product.sold) || 0) - q)
       await product.update(
-        { sold: Math.max(0, (Number(product.sold) || 0) - q) },
+        { sold: newSold },
         { transaction },
       )
+      // Emit stock update cho variant product
+      transaction.afterCommit(() => {
+        emitProductStockUpdated(
+          product.id,
+          Number(variant?.stock) || 0,
+          newSold,
+          product.seller_id,
+        )
+      })
     } else {
+      const newAvailable = (Number(product.available) || 0) + q
+      const newSold = Math.max(0, (Number(product.sold) || 0) - q)
       await product.update(
         {
-          sold: Math.max(0, (Number(product.sold) || 0) - q),
-          available: (Number(product.available) || 0) + q,
+          sold: newSold,
+          available: newAvailable,
         },
         { transaction },
       )
+      // Emit stock update
+      transaction.afterCommit(() => {
+        emitProductStockUpdated(product.id, newAvailable, newSold, product.seller_id)
+      })
     }
   }
 }
@@ -501,22 +521,34 @@ export const createOrder = async (userId, orderData) => {
     for (const { product, variant, qty } of stockDeltas) {
       const q = Number(qty) || 0
       if (variant) {
+        const newStock = Math.max(0, (Number(variant.stock) || 0) - q)
         await variant.update(
-          { stock: Math.max(0, (Number(variant.stock) || 0) - q) },
+          { stock: newStock },
           { transaction },
         )
+        const newSold = (Number(product.sold) || 0) + q
         await product.update(
-          { sold: (Number(product.sold) || 0) + q },
+          { sold: newSold },
           { transaction },
         )
+        // Emit stock update sau khi commit
+        transaction.afterCommit(() => {
+          emitProductStockUpdated(product.id, newStock, newSold, product.seller_id)
+        })
       } else {
+        const newSold = (Number(product.sold) || 0) + q
+        const newAvailable = (Number(product.available) || 0) - q
         await product.update(
           {
-            sold: (Number(product.sold) || 0) + q,
-            available: (Number(product.available) || 0) - q,
+            sold: newSold,
+            available: newAvailable,
           },
           { transaction },
         )
+        // Emit stock update sau khi commit
+        transaction.afterCommit(() => {
+          emitProductStockUpdated(product.id, newAvailable, newSold, product.seller_id)
+        })
       }
     }
 
@@ -734,7 +766,14 @@ export const getBuyerOrders = async (userId, options = {}) => {
   const offset = (page - 1) * limit
 
   const whereClause = { user_id: buyerId }
-  if (status) whereClause.status = status
+  if (status) {
+    // Hỗ trợ lọc nhiều trạng thái
+    if (Array.isArray(status) && status.length > 0) {
+      whereClause.status = { [Op.in]: status }
+    } else if (typeof status === 'string') {
+      whereClause.status = status
+    }
+  }
 
   const { count, rows } = await Order.findAndCountAll({
     where: whereClause,
@@ -746,6 +785,14 @@ export const getBuyerOrders = async (userId, options = {}) => {
             model: User,
             as: 'Seller',
             attributes: ['id', 'fullname', 'shop_name']
+          },
+          {
+            model: Product,
+            attributes: ['id', 'title', 'thumbnail']
+          },
+          {
+            model: ProductVariant,
+            attributes: ['id', 'color', 'size']
           }
         ]
       }
@@ -997,8 +1044,8 @@ export const getAllOrders = async (options = {}) => {
 
 /**
  * CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG (SELLER) — chỉ chuyển tuần tự theo SELLER_NEXT_STATUSES
- * Body: { status, carrier_name?, tracking_number?, note? } — bắt buộc carrier_name khi chuyển sang SHIPPED;
- * tracking_number để trống → hệ thống tự sinh mã nội bộ (EVO-…).
+ * Body: { status, carrier_name?, tracking_number?, note? } — bắt buộc carrier_name và tracking_number khi chuyển sang SHIPPED.
+ * Mã vận đơn do bên vận chuyển cung cấp, người bán nhập thủ công.
  */
 export const updateOrderStatus = async (
   orderId,
@@ -1057,11 +1104,15 @@ export const updateOrderStatus = async (
           'CARRIER_REQUIRED',
         )
       }
-      patch.carrier_name = carrier
-      let tn = String(tracking_number ?? '').trim()
+      const tn = String(tracking_number ?? '').trim()
       if (!tn) {
-        tn = await allocateSellerTrackingNumber(order.id, transaction)
+        throw new ApiError(
+          StatusCodes.BAD_REQUEST,
+          'Vui lòng nhập mã vận đơn do đơn vị vận chuyển cung cấp',
+          'TRACKING_NUMBER_REQUIRED',
+        )
       }
+      patch.carrier_name = carrier
       patch.tracking_number = tn
       patch.shipped_at = new Date()
       meta.carrier_name = carrier

@@ -32,6 +32,15 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: false,
       },
+      message_type: {
+        type: DataTypes.ENUM('text', 'image', 'audio', 'file'),
+        allowNull: false,
+        defaultValue: 'text',
+      },
+      media_url: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       is_read: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,

@@ -582,24 +582,6 @@ export default function ProfilePage() {
               <h3 className="mb-6 text-lg font-semibold text-gray-800">Phương thức thanh toán</h3>
               
               <div className="space-y-4">
-                {/* EvoPay */}
-                <div className="rounded-xl border-2 border-orange-300 bg-gradient-to-r from-orange-50 to-red-50 p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-lg">
-                        💳
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-800">EvoPay</p>
-                        <p className="text-sm text-gray-600">Số dư: 500.000₫</p>
-                      </div>
-                    </div>
-                    <button className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-600">
-                      Nạp tiền
-                    </button>
-                  </div>
-                </div>
-
                 {/* Thẻ tín dụng */}
                 <div className="rounded-xl border-2 border-gray-200 p-4">
                   <div className="mb-4 flex items-center justify-between">
@@ -907,9 +889,9 @@ export default function ProfilePage() {
                     type={showPwd.cur ? "text" : "password"}
                     value={pwdForm.currentPassword}
                     onChange={handlePasswordFieldChange}
-                    autoComplete="current-password"
+                    autoComplete="off"
                     className="w-full rounded-lg border-2 border-gray-300 py-2 pl-3 pr-10 outline-none transition focus:border-orange-500"
-                    placeholder="••••••••"
+                    placeholder="Nhập mật khẩu hiện tại"
                   />
                   <button
                     type="button"

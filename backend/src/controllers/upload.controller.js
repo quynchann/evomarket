@@ -42,3 +42,23 @@ export const uploadAvatar = async (req, res, next) => {
     next(err)
   }
 }
+
+export const uploadChatImage = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'No file uploaded', 'NO_FILE')
+    }
+
+    const fileUrl = `/uploads/chat/${req.file.filename}`
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: {
+        url: fileUrl,
+        filename: req.file.filename
+      }
+    })
+  } catch (err) {
+    next(err)
+  }
+}

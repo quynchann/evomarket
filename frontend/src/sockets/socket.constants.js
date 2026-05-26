@@ -37,6 +37,8 @@ export const SYSTEM_EVENTS = {
   ORDER_STATUS_UPDATED: 'order:status_updated',
   /** Server → seller: thống kê dashboard hôm nay */
   SELLER_TODAY_STATS: 'seller:today_stats',
+  /** Server → all: sản phẩm thay đổi stock */
+  PRODUCT_STOCK_UPDATED: 'product:stock_updated',
 }
 
 // Event Names - Namespace: /chat

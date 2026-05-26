@@ -182,3 +182,46 @@ export const emitOrderStatusUpdatedToBuyer = (buyerUserId, payload) => {
     console.error('[Emitter] Error emitting order status to buyer:', error);
   }
 };
+
+/**
+ * Thông báo realtime khi stock của sản phẩm thay đổi (mua hàng / trả hàng)
+ * @param {number} productId - ID sản phẩm
+ * @param {number} newStock - Số lượng còn lại mới
+ * @param {number} sold - Số lượng đã bán
+ * @param {number} sellerId - ID người bán (để thông báo riêng cho seller)
+ * @example
+ * emitProductStockUpdated(123, 45, 55, 10);
+ */
+export const emitProductStockUpdated = (productId, newStock, sold, sellerId) => {
+  try {
+    const systemNs = getSystemNamespace();
+    
+    // Broadcast cho tất cả clients đang xem sản phẩm này (global room)
+    systemNs.emit(SYSTEM_EVENTS.PRODUCT_STOCK_UPDATED, {
+      productId: Number(productId),
+      stock: Number(newStock),
+      sold: Number(sold),
+      inStock: Number(newStock) > 0,
+      timestamp: new Date().toISOString(),
+    });
+    
+    // Thông báo riêng cho seller (trong personal room của seller)
+    if (sellerId != null) {
+      const sellerRoom = ROOMS.SYSTEM.PERSONAL(sellerId);
+      systemNs.to(sellerRoom).emit(SYSTEM_EVENTS.PRODUCT_STOCK_UPDATED, {
+        productId: Number(productId),
+        stock: Number(newStock),
+        sold: Number(sold),
+        inStock: Number(newStock) > 0,
+        isSellerProduct: true,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    
+    console.log(
+      `[Emitter] Product ${productId} stock updated → stock: ${newStock}, sold: ${sold}`,
+    );
+  } catch (error) {
+    console.error('[Emitter] Error emitting product stock update:', error);
+  }
+};

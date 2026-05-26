@@ -28,10 +28,10 @@ export const chatApi = {
       body: JSON.stringify({ otherUserId }),
     }),
 
-  sendMessage: (conversationId, content) =>
+  sendMessage: (conversationId, content, messageType = 'text', mediaUrl = null) =>
     apiRequest(`/chat/conversations/${conversationId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, messageType, mediaUrl }),
     }),
 
   markAsRead: (conversationId) =>
@@ -40,6 +40,15 @@ export const chatApi = {
     }),
 
   getUnreadCount: () => apiRequest('/chat/unread-count'),
+
+  uploadChatImage: (file) => {
+    const formData = new FormData()
+    formData.append('image', file)
+    return apiRequest('/upload/chat-image', {
+      method: 'POST',
+      body: formData,
+    })
+  },
 }
 
 export const chatQueryKeys = {

@@ -428,39 +428,6 @@ export const SellerRegister = () => {
             </button>
           </form>
 
-          <div className="mt-6">
-            <div className="mb-3">
-              <div className="flex items-center">
-                <div className="h-px flex-1 bg-gray-300"></div>
-                <span className="mx-3 text-xs text-gray-600 sm:text-sm">
-                  Hoặc đăng ký bằng
-                </span>
-                <div className="h-px flex-1 bg-gray-300"></div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button className="inline-flex h-11 w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 sm:px-4">
-                <img
-                  src="https://www.svgrepo.com/show/355037/google.svg"
-                  alt="Google"
-                  className="mr-2 h-4 w-4 sm:h-5 sm:w-5"
-                />
-                Google
-              </button>
-              <button className="inline-flex h-11 w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:px-4">
-                <svg
-                  className="mr-2 h-4 w-4 text-blue-600 sm:h-5 sm:w-5"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                </svg>
-                Facebook
-              </button>
-            </div>
-          </div>
-
           <p className="mt-4 text-center text-sm text-gray-700">
             Đã có tài khoản?{" "}
             <Link

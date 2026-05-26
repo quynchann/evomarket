@@ -64,23 +64,11 @@ export default function HomePage() {
       <div className="w-full p-4 lg:p-6">
         <div className="mx-auto max-w-7xl">
               {/* Welcome */}
-              <section className="flex flex-col items-start justify-between gap-3 rounded-2xl bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 p-5 text-white shadow-xl lg:flex-row lg:items-center lg:p-6">
-                <div>
-                  <h2 className="text-base font-bold lg:text-lg">
-                    Chào mừng trở lại, {user?.fullname || "Nguyễn Văn A"}! 👋
-                  </h2>
-                  <p className="mt-1 text-xs lg:text-sm text-orange-50">Cùng EvoMarket khám phá xu hướng mới hôm nay!</p>
-                </div>
-                <div className="flex gap-4">
-                  <div className="rounded-lg bg-white/20 backdrop-blur px-4 py-2">
-                    <p className="text-xs text-orange-100">Xu Evo</p>
-                    <p className="text-sm font-bold lg:text-base">1,250</p>
-                  </div>
-                  <div className="rounded-lg bg-white/20 backdrop-blur px-4 py-2">
-                    <p className="text-xs text-orange-100">EvoPay</p>
-                    <p className="text-sm font-bold lg:text-base">500K</p>
-                  </div>
-                </div>
+              <section className="rounded-2xl bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 p-5 text-white shadow-xl lg:p-6">
+                <h2 className="text-base font-bold lg:text-lg">
+                  Chào mừng trở lại, {user?.fullname || "Nguyễn Văn A"}! 👋
+                </h2>
+                <p className="mt-1 text-xs lg:text-sm text-orange-50">Cùng EvoMarket khám phá xu hướng mới hôm nay!</p>
               </section>
 
               {/* Banner động — SVG nhúng trong homeBannerSlides.jsx (không tải file ngoài) */}

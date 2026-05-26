@@ -34,20 +34,25 @@ function StatusBadge({ status }) {
   const map = {
     active: {
       text: "Đang bán",
-      bg: "bg-green-100",
-      textColor: "text-green-600",
+      bg: "bg-gradient-to-r from-green-50 to-emerald-50",
+      border: "border border-green-200",
+      textColor: "text-green-700",
+      icon: "✓",
     },
     "out-of-stock": {
       text: "Hết hàng",
-      bg: "bg-red-100",
-      textColor: "text-red-600",
+      bg: "bg-gradient-to-r from-red-50 to-rose-50",
+      border: "border border-red-200",
+      textColor: "text-red-700",
+      icon: "✕",
     },
   };
   const s = map[status] || map["out-of-stock"];
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap ${s.bg} ${s.textColor}`}
+      className={`inline-flex items-center gap-1 justify-center rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap ${s.bg} ${s.border} ${s.textColor} shadow-sm`}
     >
+      <span className="text-sm">{s.icon}</span>
       {s.text}
     </span>
   );
@@ -194,6 +199,7 @@ export default function ProductManager() {
   const [filterStatus, setFilterStatus] = useState("");
   const [pageSize, _setPageSize] = useState(10);
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState("table"); // "table" or "grid"
 
   /* Modal states */
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -408,48 +414,67 @@ export default function ProductManager() {
   return (
     <div className="min-h-full bg-gray-50">
       <div className="px-4 py-6 sm:px-6 sm:py-8">
-        {/* Page Title */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        {/* Page Header - Enhanced with gradient */}
+        <div className="mb-8 flex flex-col gap-4 rounded-2xl bg-gradient-to-br from-orange-50 via-white to-rose-50 p-6 shadow-lg border border-orange-100 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 sm:text-3xl">
-              Quản lý sản phẩm
-            </h1>
-            <p className="mt-2 text-gray-600">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 shadow-lg">
+                <span className="text-2xl">🏪</span>
+              </div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-rose-600 bg-clip-text text-transparent sm:text-4xl">
+                Quản lý sản phẩm
+              </h1>
+            </div>
+            <p className="text-slate-600 ml-15">
               Quản lý danh mục và sản phẩm của cửa hàng
             </p>
           </div>
           <button
             type="button"
             onClick={() => openAddProduct()}
-            className="shrink-0 rounded-xl bg-white px-4 py-2 font-medium text-orange-600 shadow hover:bg-orange-50"
+            className="group relative shrink-0 overflow-hidden rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:scale-105"
           >
-            + Thêm sản phẩm
+            <span className="relative z-10 flex items-center gap-2">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Thêm sản phẩm
+            </span>
+            <div className="absolute inset-0 bg-gradient-to-r from-orange-600 to-rose-600 opacity-0 transition-opacity group-hover:opacity-100"></div>
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="mb-6 overflow-x-auto border-b border-slate-200">
-          <nav className="flex w-max min-w-full gap-6 sm:w-auto sm:min-w-0">
-            {/* Danh mục trước, Sản phẩm sau */}
+        {/* Tabs - Enhanced */}
+        <div className="mb-6 overflow-x-auto rounded-xl bg-white shadow-sm border border-slate-200">
+          <nav className="flex w-max min-w-full gap-1 p-2 sm:w-auto sm:min-w-0">
             <button
               onClick={() => setActiveTab("categories")}
-              className={`border-b-2 px-1 py-2 text-sm font-medium ${
+              className={`relative rounded-lg px-6 py-3 text-sm font-semibold transition-all ${
                 activeTab === "categories"
-                  ? "border-orange-600 text-orange-600"
-                  : "border-transparent text-slate-500 hover:text-orange-600"
+                  ? "bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-md"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
-              Danh mục
+              <span className="flex items-center gap-2">
+                📁
+                Danh mục
+              </span>
             </button>
             <button
               onClick={() => setActiveTab("products")}
-              className={`border-b-2 px-1 py-2 text-sm font-medium ${
+              className={`relative rounded-lg px-6 py-3 text-sm font-semibold transition-all ${
                 activeTab === "products"
-                  ? "border-orange-600 text-orange-600"
-                  : "border-transparent text-slate-500 hover:text-orange-600"
+                  ? "bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-md"
+                  : "text-slate-600 hover:bg-slate-50"
               }`}
             >
-              Sản phẩm
+              <span className="flex items-center gap-2">
+                📦
+                Sản phẩm
+                <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                  {products.length}
+                </span>
+              </span>
             </button>
           </nav>
         </div>
@@ -492,69 +517,88 @@ export default function ProductManager() {
               />
             </div>
 
-            {/* Filters / Search */}
-            <div
-              className="mb-6 rounded-lg p-4 shadow-sm"
-              style={{
-                backgroundColor: config.surface_color,
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              <div className="flex flex-col gap-4 md:flex-row">
-                <div className="flex-1">
-                  <div className="relative">
-                    <svg
-                      className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 transform text-slate-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            {/* Filters / Search - Enhanced with View Mode Toggle */}
+            <div className="mb-6 rounded-xl bg-white p-6 shadow-md border border-slate-200">
+              <div className="flex flex-col gap-4">
+                {/* Top row: Search + View toggle */}
+                <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <svg
+                        className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-slate-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                      </svg>
+                      <input
+                        type="text"
+                        placeholder="Tìm kiếm theo tên sản phẩm hoặc danh mục..."
+                        value={searchText}
+                        onChange={(e) => {
+                          setSearchText(e.target.value);
+                          setPage(1);
+                        }}
+                        className="w-full rounded-xl border-2 border-slate-200 py-3 pr-4 pl-12 transition-all focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
                       />
-                    </svg>
-                    <input
-                      type="text"
-                      placeholder="Tìm kiếm sản phẩm..."
-                      value={searchText}
-                      onChange={(e) => {
-                        setSearchText(e.target.value);
-                        setPage(1);
-                      }}
-                      className="w-full rounded-lg border py-2 pr-4 pl-10 focus:ring-2 focus:outline-none"
-                      style={{
-                        borderColor: "#e2e8f0",
-                        backgroundColor: config.surface_color,
-                        color: config.text_color,
-                      }}
-                    />
+                    </div>
+                  </div>
+
+                  {/* View Mode Toggle */}
+                  <div className="flex gap-2 rounded-xl bg-slate-100 p-1">
+                    <button
+                      onClick={() => setViewMode("table")}
+                      className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                        viewMode === "table"
+                          ? "bg-white text-orange-600 shadow-sm"
+                          : "text-slate-600 hover:text-orange-600"
+                      }`}
+                      title="Xem dạng bảng"
+                    >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setViewMode("grid")}
+                      className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                        viewMode === "grid"
+                          ? "bg-white text-orange-600 shadow-sm"
+                          : "text-slate-600 hover:text-orange-600"
+                      }`}
+                      title="Xem dạng lưới"
+                    >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
-                <select
-                  id="category-filter"
-                  value={filterCategory}
-                  onChange={(e) => {
-                    setFilterCategory(e.target.value);
-                    setPage(1);
-                  }}
-                  className="rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none"
-                  style={{
-                    borderColor: "#e2e8f0",
-                    backgroundColor: config.surface_color,
-                    color: config.text_color,
-                  }}
-                >
-                  <option value="">Tất cả danh mục</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                {/* Filters row */}
+                <div className="flex flex-wrap gap-3">
+                  <select
+                    id="category-filter"
+                    value={filterCategory}
+                    onChange={(e) => {
+                      setFilterCategory(e.target.value);
+                      setPage(1);
+                    }}
+                    className="rounded-lg border-2 border-slate-200 px-4 py-2 transition-all focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
+                  >
+                    <option value="">📁 Tất cả danh mục</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
 
                 <select
                   value={filterStatus}
@@ -562,17 +606,33 @@ export default function ProductManager() {
                     setFilterStatus(e.target.value);
                     setPage(1);
                   }}
-                  className="rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none"
-                  style={{
-                    borderColor: "#e2e8f0",
-                    backgroundColor: config.surface_color,
-                    color: config.text_color,
-                  }}
+                  className="rounded-lg border-2 border-slate-200 px-4 py-2 transition-all focus:border-orange-400 focus:ring-4 focus:ring-orange-100 focus:outline-none"
                 >
-                  <option value="">Tất cả trạng thái</option>
-                  <option value="active">Đang bán</option>
-                  <option value="out-of-stock">Hết hàng</option>
+                  <option value="">📊 Tất cả trạng thái</option>
+                  <option value="active">✅ Đang bán</option>
+                  <option value="out-of-stock">❌ Hết hàng</option>
                 </select>
+
+                  {/* Clear filters button */}
+                  {(searchText || filterCategory || filterStatus) && (
+                    <button
+                      onClick={() => {
+                        setSearchText("");
+                        setFilterCategory("");
+                        setFilterStatus("");
+                        setPage(1);
+                      }}
+                      className="rounded-lg border-2 border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <span className="flex items-center gap-2">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Xóa bộ lọc
+                      </span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -852,10 +912,14 @@ export default function ProductManager() {
 
                           <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <span
-                              className="text-sm"
-                              style={{ color: config.text_color }}
+                              className={`text-sm font-medium whitespace-nowrap ${
+                                (product.available || 0) > 0 
+                                  ? 'text-green-600' 
+                                  : 'text-red-600'
+                              }`}
+                              title={`Còn lại: ${product.available || 0} | Tổng: ${product.stock || 0}`}
                             >
-                              {product.stock}
+                              {product.available || 0}/{product.stock || 0}
                             </span>
                           </td>
 

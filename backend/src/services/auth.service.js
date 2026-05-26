@@ -93,6 +93,13 @@ export const login = async ({ email, password, deviceInfo }) => {
       'INVALID_CREDENTIALS'
     )
 
+  if (user.account_status === 'LOCKED')
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ với quản trị viên để được hỗ trợ.',
+      'ACCOUNT_LOCKED'
+    )
+
   const tokens = await generateTokens(user, deviceInfo)
 
   return {
@@ -135,6 +142,13 @@ export const refreshToken = async ({ requestToken, deviceInfo = null }) => {
         StatusCodes.UNAUTHORIZED,
         'User not found',
         'USER_NOT_FOUND'
+      )
+
+    if (user.account_status === 'LOCKED')
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ với quản trị viên để được hỗ trợ.',
+        'ACCOUNT_LOCKED'
       )
 
     // (Cơ chế Rotation) Hủy token cũ, cấp token mới

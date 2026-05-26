@@ -49,4 +49,9 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  notifyUser: (body) =>
+    apiRequest('/admin/notifications/user', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 }

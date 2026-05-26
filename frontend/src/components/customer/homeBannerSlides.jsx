@@ -212,7 +212,7 @@ function Slide3({ className }) {
         fontSize="24"
         fontWeight="600"
       >
-        Tích Xu Evo · Thanh toán EvoPay tiện lợi
+        Tích Xu Evo · Ưu đãi mỗi ngày
       </text>
       <text
         x="72"

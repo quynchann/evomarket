@@ -25,11 +25,15 @@ export function mapNormalizedMessageToBubble(msg, currentUserId, mode) {
         ? 'user'
         : 'shop'
 
+  const messageType = msg.message_type || 'text'
+  const mediaUrl = msg.media_url ? resolveAvatarUrl(msg.media_url) : null
+
   return {
     id: msg.id,
     who,
-    type: 'text',
+    type: messageType,
     text: msg.content ?? '',
+    mediaUrl,
     time: new Date(msg.created_at),
   }
 }

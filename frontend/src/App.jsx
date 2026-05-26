@@ -34,7 +34,6 @@ function App() {
       "/customer/notifications",
       "/customer/notification-settings",
       "/customer/privacy-settings",
-      "/customer/personal-info",
       "/customer/cart",
       "/customer/checkout",
       "/customer/order-success",

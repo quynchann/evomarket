@@ -57,3 +57,27 @@ export const markAllRead = async (req, res, next) => {
     next(err)
   }
 }
+
+export const getSettings = async (req, res, next) => {
+  try {
+    const settings = await notificationService.getNotificationPreferencesForUser(
+      req.user.id,
+    )
+    res.status(StatusCodes.OK).json({ success: true, data: settings })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const updateSettings = async (req, res, next) => {
+  try {
+    const patch = req.body && typeof req.body === 'object' ? req.body : {}
+    const settings = await notificationService.updateNotificationPreferencesForUser(
+      req.user.id,
+      patch,
+    )
+    res.status(StatusCodes.OK).json({ success: true, data: settings })
+  } catch (err) {
+    next(err)
+  }
+}

@@ -7,6 +7,40 @@ import {
   emitUnreadCountUpdate,
 } from '../sockets/emitters/system.emitter.js'
 
+/** Giữ khớp với mặc định ở frontend (NotificationSettings). */
+export const DEFAULT_NOTIFICATION_PREFERENCES = {
+  orderConfirmed: true,
+  orderPreparing: true,
+  orderShipped: true,
+  orderDelivered: true,
+  orderCancelled: true,
+  promotions: true,
+  newVouchers: true,
+  flashSale: true,
+  exclusiveDeals: false,
+  newProducts: false,
+  productRestock: true,
+  priceDrops: true,
+  wishlistUpdates: true,
+  reviewReminder: true,
+  reviewReplies: true,
+  emailNotifications: true,
+  smsNotifications: false,
+  pushNotifications: true,
+}
+
+function mergeNotificationPreferences(stored) {
+  const base = { ...DEFAULT_NOTIFICATION_PREFERENCES }
+  if (!stored || typeof stored !== 'object') return base
+  const keys = Object.keys(DEFAULT_NOTIFICATION_PREFERENCES)
+  for (const key of keys) {
+    if (typeof stored[key] === 'boolean') {
+      base[key] = stored[key]
+    }
+  }
+  return base
+}
+
 export function toNotificationDto(row) {
   if (!row) return null
   const plain = row.get ? row.get({ plain: true }) : row
@@ -155,4 +189,42 @@ export async function createAndPushForAllUsersWithRole(
   }
 
   return { role: roleStr, recipientCount }
+}
+
+export async function getNotificationPreferencesForUser(userId) {
+  const uid = Number(userId)
+  if (!Number.isFinite(uid)) {
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES }
+  }
+  const row = await User.findByPk(uid, {
+    attributes: ['notification_preferences'],
+  })
+  return mergeNotificationPreferences(row?.notification_preferences)
+}
+
+export async function updateNotificationPreferencesForUser(userId, patch) {
+  const uid = Number(userId)
+  if (!Number.isFinite(uid)) {
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES }
+  }
+  const row = await User.findByPk(uid, {
+    attributes: ['id', 'notification_preferences'],
+  })
+  if (!row) {
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES }
+  }
+  const merged = mergeNotificationPreferences(row.notification_preferences)
+  const keys = Object.keys(DEFAULT_NOTIFICATION_PREFERENCES)
+  if (patch && typeof patch === 'object') {
+    for (const key of keys) {
+      if (Object.prototype.hasOwnProperty.call(patch, key)) {
+        const v = patch[key]
+        if (typeof v === 'boolean') {
+          merged[key] = v
+        }
+      }
+    }
+  }
+  await row.update({ notification_preferences: merged })
+  return merged
 }

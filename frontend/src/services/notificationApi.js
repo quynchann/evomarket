@@ -19,4 +19,15 @@ export const notificationApi = {
   markAllRead: async () => {
     return await apiRequest("/notifications/read-all", { method: "PATCH" });
   },
+
+  getSettings: async () => {
+    return await apiRequest("/notifications/settings", { method: "GET" });
+  },
+
+  updateSettings: async (partial) => {
+    return await apiRequest("/notifications/settings", {
+      method: "PATCH",
+      body: JSON.stringify(partial ?? {}),
+    });
+  },
 };

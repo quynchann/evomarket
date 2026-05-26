@@ -11,6 +11,8 @@ function normalizeMessage(row) {
     sender_id: row.sender_id ?? row.senderId,
     conversation_id: row.conversation_id ?? row.conversationId,
     created_at: row.created_at ?? row.createdAt,
+    message_type: row.message_type ?? row.messageType ?? 'text',
+    media_url: row.media_url ?? row.mediaUrl ?? null,
     Sender: row.Sender,
   }
 }
@@ -23,6 +25,8 @@ function normalizeSocketMessage(row) {
     senderId: row.senderId,
     conversationId: row.conversationId,
     createdAt: row.createdAt,
+    messageType: row.messageType,
+    mediaUrl: row.mediaUrl,
     Sender: row.Sender,
   })
 }
@@ -263,6 +267,33 @@ export function useChatInfiniteMessages(conversationId) {
     }
   }, [])
 
+  const sendImage = useCallback(async (file) => {
+    const cid = idRef.current
+    if (!cid || !file) return false
+
+    try {
+      const uploadRes = await chatApi.uploadChatImage(file)
+      const mediaUrl = uploadRes.data?.url
+
+      if (!mediaUrl) {
+        throw new Error('Upload thất bại')
+      }
+
+      const res = await chatApi.sendMessage(cid, '[Hình ảnh]', 'image', mediaUrl)
+
+      const row = normalizeMessage(res.data)
+
+      if (row && idRef.current === cid) {
+        setMessages((prev) => mergeById(prev, [row]).sort(sortAscending))
+      }
+      shouldStickBottomRef.current = true
+      return true
+    } catch (e) {
+      setError(e.message || 'Gửi ảnh thất bại')
+      return false
+    }
+  }, [])
+
   return {
     messages,
     loadingInitial,
@@ -274,6 +305,7 @@ export function useChatInfiniteMessages(conversationId) {
     /** Phần tử đặt NGAY ĐẦU danh sách tin trong scroll root */
     topSentinelRef,
     sendText,
+    sendImage,
     /** Trỏ xuống đáy khung tin (smooth) */
     scrollToBottomSmooth: () => {
       scrollRoot?.scrollTo({

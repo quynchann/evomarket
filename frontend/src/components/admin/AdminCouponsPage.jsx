@@ -14,6 +14,7 @@ export default function AdminCouponsPage() {
   })
 
   const [form, setForm] = useState({
+    title: '',
     code: '',
     discountType: 'Percentage',
     discountValue: '',
@@ -27,6 +28,7 @@ export default function AdminCouponsPage() {
   const createMut = useMutation({
     mutationFn: () =>
       adminApi.createPlatformCoupon({
+        title: form.title,
         code: form.code,
         discountType: form.discountType,
         discountValue: Number(form.discountValue),
@@ -40,6 +42,7 @@ export default function AdminCouponsPage() {
       qc.invalidateQueries({ queryKey: ['admin', 'platform-coupons'] })
       toast.success('Đã tạo mã')
       setForm({
+        title: '',
         code: '',
         discountType: 'Percentage',
         discountValue: '',
@@ -68,66 +71,110 @@ export default function AdminCouponsPage() {
     <div className="min-h-screen">
       <header className="sticky top-0 z-10 border-b border-gray-200 bg-white px-8 py-6">
         <h1 className="text-2xl font-bold text-gray-900">Mã giảm giá sàn</h1>
-        <p className="mt-1 text-sm text-gray-600">Tạo / xóa mã toàn sàn (seller_id = null)</p>
       </header>
 
       <div className="space-y-8 p-8">
         <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold">Tạo mã mới</h2>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            <input
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              placeholder="Mã (VD: SUMMER26)"
-              value={form.code}
-              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
-            />
-            <select
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              value={form.discountType}
-              onChange={(e) => setForm((f) => ({ ...f, discountType: e.target.value }))}>
-              <option value="Percentage">Phần trăm</option>
-              <option value="Fixed">Số tiền cố định</option>
-            </select>
-            <input
-              type="number"
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              placeholder="Giá trị giảm"
-              value={form.discountValue}
-              onChange={(e) => setForm((f) => ({ ...f, discountValue: e.target.value }))}
-            />
-            <input
-              type="number"
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              placeholder="Đơn tối thiểu (đ)"
-              value={form.minOrderValue}
-              onChange={(e) => setForm((f) => ({ ...f, minOrderValue: e.target.value }))}
-            />
-            <input
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              placeholder="Max lượt (để trống = không giới hạn)"
-              value={form.maxUses}
-              onChange={(e) => setForm((f) => ({ ...f, maxUses: e.target.value }))}
-            />
-            <input
-              type="date"
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              value={form.startDate}
-              onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
-            />
-            <input
-              type="date"
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              value={form.endDate}
-              onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-            />
-            <label className="flex items-center gap-2 text-sm">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">Tiêu đề</label>
               <input
-                type="checkbox"
-                checked={form.newUserOnly}
-                onChange={(e) => setForm((f) => ({ ...f, newUserOnly: e.target.checked }))}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                placeholder="VD: Giảm giá mùa hè"
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               />
-              Chỉ khách mới
-            </label>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">Mã giảm giá</label>
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                placeholder="VD: SUMMER26"
+                value={form.code}
+                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">Loại giảm giá</label>
+              <select
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                value={form.discountType}
+                onChange={(e) => setForm((f) => ({ ...f, discountType: e.target.value }))}>
+                <option value="Percentage">Phần trăm</option>
+                <option value="Fixed">Số tiền cố định</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Giá trị giảm (0-100)
+              </label>
+              <input
+                type="number"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                placeholder="VD: 10"
+                value={form.discountValue}
+                min="0"
+                max="100"
+                onChange={(e) => {
+                  const value = e.target.value
+                  if (value === '' || (Number(value) >= 0 && Number(value) <= 100)) {
+                    setForm((f) => ({ ...f, discountValue: value }))
+                  }
+                }}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Đơn hàng tối thiểu (đ)
+              </label>
+              <input
+                type="number"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                placeholder="0"
+                value={form.minOrderValue}
+                onChange={(e) => setForm((f) => ({ ...f, minOrderValue: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Số lượt sử dụng tối đa
+              </label>
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                placeholder="Để trống = không giới hạn"
+                value={form.maxUses}
+                onChange={(e) => setForm((f) => ({ ...f, maxUses: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">Ngày bắt đầu</label>
+              <input
+                type="date"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                value={form.startDate}
+                onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">Ngày kết thúc</label>
+              <input
+                type="date"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                value={form.endDate}
+                onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+              />
+            </div>
+            <div className="flex items-end pb-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.newUserOnly}
+                  onChange={(e) => setForm((f) => ({ ...f, newUserOnly: e.target.checked }))}
+                />
+                <span className="font-medium text-gray-700">Chỉ dành cho khách hàng mới</span>
+              </label>
+            </div>
           </div>
           <button
             type="button"

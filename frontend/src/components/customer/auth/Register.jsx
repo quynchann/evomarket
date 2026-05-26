@@ -397,61 +397,6 @@ export const CustomerRegister = () => {
               </Link>
             </p>
           </div>
-
-          <div className="mt-6">
-            <div className="flex items-center">
-              <div className="h-px flex-1 bg-gray-300" />
-              <span className="mx-3 text-xs text-gray-500">
-                Hoặc đăng ký bằng
-              </span>
-              <div className="h-px flex-1 bg-gray-300" />
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="inline-flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-600 shadow-sm transition duration-200 hover:bg-gray-100"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 48 48"
-                  className="h-5 w-5"
-                >
-                  <path
-                    fill="#EA4335"
-                    d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.64 30.47 0 24 0 14.73 0 6.76 5.26 2.83 12.94l7.98 6.2C12.48 13.08 17.74 9.5 24 9.5z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M46.98 24.55c0-1.62-.15-3.18-.43-4.68H24v8.84h13c-.56 2.9-2.27 5.35-4.83 7.02l7.46 5.79C43.89 37.54 46.98 31.54 46.98 24.55z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M10.81 28.93a14.5 14.5 0 0 1-.77-4.43c0-1.54.28-3.02.77-4.43v-8.84H2.83A23.91 23.91 0 0 0 0 24.5c0 3.83.92 7.46 2.83 10.77l7.98-6.34z"
-                  />
-                  <path
-                    fill="#4285F4"
-                    d="M24 48c6.48 0 11.93-2.13 15.9-5.84l-7.46-5.79c-2.05 1.38-4.71 2.18-8.44 2.18-6.26 0-11.52-3.58-13.19-8.84l-7.98 6.34C6.76 42.74 14.73 48 24 48z"
-                  />
-                </svg>
-                <span className="ml-2">Google</span>
-              </button>
-
-              <button
-                type="button"
-                className="inline-flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-500 transition duration-200 hover:bg-gray-50"
-              >
-                <svg
-                  className="h-5 w-5 text-blue-600"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                </svg>
-                <span className="ml-2">Facebook</span>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

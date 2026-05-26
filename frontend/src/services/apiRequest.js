@@ -34,8 +34,11 @@ const processQueue = (error, token = null) => {
 export const apiRequest = async (endpoint, options = {}, retry = true) => {
   const url = `${API_BASE_URL}${endpoint}`;
   
+  // Don't set Content-Type for FormData - browser will set it with boundary
+  const isFormData = options.body instanceof FormData;
+  
   let headers = {
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...options.headers,
   };
 

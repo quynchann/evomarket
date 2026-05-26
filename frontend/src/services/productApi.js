@@ -92,6 +92,8 @@ export const searchProducts = async (query, filters = {}) => {
   if (filters.page) params.append('page', filters.page);
   if (filters.limit) params.append('limit', filters.limit);
   if (filters.sortBy) params.append('sortBy', filters.sortBy);
+  if (filters.minPrice) params.append('minPrice', filters.minPrice);
+  if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
 
   const response = await fetch(`${API_URL}/products/search?${params.toString()}`);
   

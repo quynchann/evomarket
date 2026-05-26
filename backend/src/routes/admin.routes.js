@@ -30,4 +30,9 @@ router.post(
   adminNotificationController.notifyByRole,
 )
 
+router.post(
+  '/notifications/user',
+  adminNotificationController.notifyByUserId,
+)
+
 export default router

@@ -75,10 +75,23 @@ export const listUsersForAdmin = async ({
   }
   const search = q != null ? String(q).trim() : ''
   if (search) {
+    const searchLower = search.toLowerCase()
     where[Op.or] = [
-      { fullname: { [Op.like]: `%${search}%` } },
-      { email: { [Op.like]: `%${search}%` } },
-      { phone_number: { [Op.like]: `%${search}%` } },
+      sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('fullname')),
+        'LIKE',
+        `%${searchLower}%`
+      ),
+      sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('email')),
+        'LIKE',
+        `%${searchLower}%`
+      ),
+      sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('phone_number')),
+        'LIKE',
+        `%${searchLower}%`
+      ),
     ]
   }
 
@@ -147,7 +160,14 @@ export const listProductsForAdmin = async ({
 
   const search = q != null ? String(q).trim() : ''
   if (search) {
-    where.title = { [Op.like]: `%${search}%` }
+    const searchLower = search.toLowerCase()
+    where[Op.and] = [
+      sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('title')),
+        'LIKE',
+        `%${searchLower}%`
+      )
+    ]
   }
 
   const { count, rows } = await Product.findAndCountAll({

@@ -77,6 +77,7 @@ export default function SellerCouponManagement() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: queryKeys.sellerCoupons,
@@ -118,7 +119,14 @@ export default function SellerCouponManagement() {
     onError: (e) => toast.error(e.message || "Không xóa được"),
   });
 
-  const coupons = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+  const coupons = useMemo(() => {
+    const list = Array.isArray(data) ? data : [];
+    if (!searchTerm.trim()) return list;
+    const search = searchTerm.toLowerCase();
+    return list.filter(c => 
+      c.code.toLowerCase().includes(search)
+    );
+  }, [data, searchTerm]);
 
   const openCreate = () => {
     setEditing(null);
@@ -202,6 +210,42 @@ export default function SellerCouponManagement() {
         </div>
       )}
 
+      <div className="mb-4">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Tìm kiếm mã khuyến mãi..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 pl-10 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+          />
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
@@ -226,7 +270,11 @@ export default function SellerCouponManagement() {
               ) : coupons.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
-                    Chưa có mã nào. Nhấn &quot;Tạo mã mới&quot; để bắt đầu.
+                    {searchTerm ? (
+                      <>Không tìm thấy mã nào khớp với &quot;{searchTerm}&quot;</>
+                    ) : (
+                      <>Chưa có mã nào. Nhấn &quot;Tạo mã mới&quot; để bắt đầu.</>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -322,15 +370,25 @@ export default function SellerCouponManagement() {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">
-                {form.discountType === "Percentage" ? "Phần trăm" : "Số tiền giảm"}
+                {form.discountType === "Percentage" ? "Phần trăm (0-100)" : "Số tiền giảm"}
               </label>
               <input
                 type="number"
-                min="0.01"
+                min={form.discountType === "Percentage" ? "0" : "0.01"}
+                max={form.discountType === "Percentage" ? "100" : undefined}
                 step="any"
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-orange-500 focus:outline-none"
                 value={form.discountValue}
-                onChange={(e) => setForm((f) => ({ ...f, discountValue: e.target.value }))}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (form.discountType === "Percentage") {
+                    if (value === "" || (Number(value) >= 0 && Number(value) <= 100)) {
+                      setForm((f) => ({ ...f, discountValue: value }));
+                    }
+                  } else {
+                    setForm((f) => ({ ...f, discountValue: value }));
+                  }
+                }}
                 required
               />
             </div>

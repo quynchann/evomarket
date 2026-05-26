@@ -131,7 +131,7 @@ export const sendMessage = async (req, res, next) => {
   try {
     const userId = req.user.id
     const { conversationId } = req.params
-    const { content } = req.body
+    const { content, messageType = 'text', mediaUrl } = req.body
 
     if (!content || content.trim() === '') {
       return res.status(400).json({
@@ -144,7 +144,11 @@ export const sendMessage = async (req, res, next) => {
       conversationId,
       userId,
       content.trim(),
-      { userRole: req.user.role }
+      {
+        userRole: req.user.role,
+        messageType,
+        mediaUrl
+      }
     )
 
     const payload = chatService.messageToSocketPayload(message)

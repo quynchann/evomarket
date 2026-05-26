@@ -167,7 +167,7 @@ export const getFeaturedProducts = async (req, res, next) => {
  */
 export const searchProducts = async (req, res, next) => {
   try {
-    const { q, page = 1, limit = 20, sortBy } = req.query
+    const { q, page = 1, limit = 20, sortBy, minPrice, maxPrice } = req.query
 
     if (!q || !q.trim()) {
       return res.status(StatusCodes.BAD_REQUEST).json({
@@ -179,7 +179,9 @@ export const searchProducts = async (req, res, next) => {
     const filters = {
       page: Number(page),
       limit: Number(limit),
-      sortBy
+      sortBy,
+      minPrice: minPrice ? Number(minPrice) : undefined,
+      maxPrice: maxPrice ? Number(maxPrice) : undefined
     }
 
     const result = await productService.searchProducts(q, filters)

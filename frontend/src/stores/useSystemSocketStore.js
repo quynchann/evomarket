@@ -154,6 +154,36 @@ export const useSystemSocketStore = create((set, get) => ({
       }
     })
 
+    socket.on(SYSTEM_EVENTS.PRODUCT_STOCK_UPDATED, (payload) => {
+      console.log('[System Socket] Product stock updated:', payload)
+      const productId = Number(payload?.productId)
+      if (!Number.isFinite(productId)) return
+      
+      // Invalidate product queries để refetch dữ liệu mới
+      queryClient.invalidateQueries({ queryKey: ['product', String(productId)] })
+      queryClient.invalidateQueries({ queryKey: ['public-products'] })
+      queryClient.invalidateQueries({ queryKey: ['featured-products'] })
+      
+      // Nếu là sản phẩm của seller, invalidate seller products
+      if (payload?.isSellerProduct) {
+        queryClient.invalidateQueries({ queryKey: ['seller-products'] })
+      }
+      
+      // Update cache trực tiếp nếu có data trong cache
+      queryClient.setQueryData(['product', String(productId)], (oldData) => {
+        if (!oldData?.data) return oldData
+        return {
+          ...oldData,
+          data: {
+            ...oldData.data,
+            stock: payload.stock,
+            sold: payload.sold,
+            inStock: payload.inStock,
+          }
+        }
+      })
+    })
+
     socket.on('error', (err) => {
       console.error('[System Socket] error event:', err)
     })

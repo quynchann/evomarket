@@ -18,6 +18,8 @@ export const messageToSocketPayload = (messageInstance, { tempId } = {}) => {
     conversationId: m.conversation_id,
     senderId: m.sender_id,
     content: m.content,
+    messageType: m.message_type || 'text',
+    mediaUrl: m.media_url || null,
     isRead: m.is_read,
     createdAt: created instanceof Date ? created.toISOString() : created,
     Sender: sender
@@ -246,7 +248,7 @@ export const sendMessage = async (
   conversationId,
   senderId,
   content,
-  { userRole } = {}
+  { userRole, messageType = 'text', mediaUrl = null } = {}
 ) => {
   const conversation = await assertConversationMember(
     conversationId,
@@ -258,11 +260,23 @@ export const sendMessage = async (
     conversation_id: conversationId,
     sender_id: senderId,
     content,
+    message_type: messageType,
+    media_url: mediaUrl,
     is_read: false
   })
 
+  // For image messages, show a descriptive last_message
+  const lastMessageText =
+    messageType === 'image'
+      ? '[Hình ảnh]'
+      : messageType === 'audio'
+        ? '[Âm thanh]'
+        : messageType === 'file'
+          ? '[File]'
+          : content
+
   await conversation.update({
-    last_message: content,
+    last_message: lastMessageText,
     last_message_at: new Date()
   })
 

@@ -1,11 +1,14 @@
 import { apiRequest } from "./apiRequest.js";
 
 export const orderApi = {
-  listMine: async ({ page = 1, limit = 20, status } = {}) => {
+  listMine: async ({ page = 1, limit = 20, status, statuses } = {}) => {
     const q = new URLSearchParams();
     q.set("page", String(page));
     q.set("limit", String(limit));
     if (status) q.set("status", status);
+    if (statuses && Array.isArray(statuses)) {
+      statuses.forEach(s => q.append("status", s));
+    }
     return await apiRequest(`/orders?${q.toString()}`, { method: "GET" });
   },
 

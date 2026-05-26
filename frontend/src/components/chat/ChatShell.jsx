@@ -5,12 +5,12 @@ import { toast } from 'sonner'
 import {
   Search,
   Camera,
-  Mic,
   Send,
   Pin,
   ChevronDown,
   MoreHorizontal,
   ChevronLeft,
+  X,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useChatSocketStore } from '@/stores/useChatSocketStore'
@@ -57,9 +57,9 @@ export default function ChatShell({
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
   const [totalUnread, setTotalUnread] = useState(0)
+  const [selectedImages, setSelectedImages] = useState([])
 
   const imageInputRef = useRef(null)
-  const audioInputRef = useRef(null)
   const typingStopTimerRef = useRef(null)
   const lastMarkedOpenConvRef = useRef(null)
 
@@ -87,6 +87,7 @@ export default function ChatShell({
     scrollRootRefCallback,
     topSentinelRef,
     sendText,
+    sendImage,
   } = useChatInfiniteMessages(activeConversationId)
 
   const refreshUnreadCount = useCallback(() => {
@@ -255,13 +256,77 @@ export default function ChatShell({
     else toast.error('Không gửi được tin nhắn')
   }
 
-  const handleImageFiles = () => {
-    toast.info('Gửi ảnh qua chat sẽ được bổ sung sau.')
+  const handleImageFiles = (e) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    if (activeConversationId == null) {
+      toast.error('Vui lòng chọn cuộc trò chuyện')
+      return
+    }
+
+    const newImages = []
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      const preview = URL.createObjectURL(file)
+      newImages.push({ file, preview, id: Date.now() + i })
+    }
+    setSelectedImages((prev) => [...prev, ...newImages])
   }
 
-  const handleAudioFiles = () => {
-    toast.info('Gửi âm thanh qua chat sẽ được bổ sung sau.')
+  const removeImage = (id) => {
+    setSelectedImages((prev) => {
+      const image = prev.find((img) => img.id === id)
+      if (image) {
+        URL.revokeObjectURL(image.preview)
+      }
+      return prev.filter((img) => img.id !== id)
+    })
   }
+
+  const handleSendMessage = async () => {
+    if (activeConversationId == null) return
+
+    const hasText = input?.trim()
+    const hasImages = selectedImages.length > 0
+
+    if (!hasText && !hasImages) return
+
+    // Send text message first if exists
+    if (hasText) {
+      const ok = await sendText(input.trim())
+      if (!ok) {
+        toast.error('Không gửi được tin nhắn')
+        return
+      }
+      setInput('')
+    }
+
+    // Send images
+    if (hasImages) {
+      for (const image of selectedImages) {
+        const ok = await sendImage(image.file)
+        if (!ok) {
+          toast.error(`Không gửi được ảnh ${image.file.name}`)
+        }
+      }
+      // Clear all images after sending
+      selectedImages.forEach((img) => URL.revokeObjectURL(img.preview))
+      setSelectedImages([])
+    }
+  }
+
+  // Cleanup preview URLs on unmount or conversation change
+  useEffect(() => {
+    return () => {
+      selectedImages.forEach((img) => URL.revokeObjectURL(img.preview))
+    }
+  }, [activeConversationId])
+
+  // Clear selected images when changing conversation
+  useEffect(() => {
+    selectedImages.forEach((img) => URL.revokeObjectURL(img.preview))
+    setSelectedImages([])
+  }, [activeConversationId])
 
   const handlePinConversation = (conversationId) => {
     setPinnedIds((prev) => {
@@ -594,7 +659,9 @@ export default function ChatShell({
                       key={row.key}
                       className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                       <div
-                        className={`max-w-[calc(100vw-4rem)] rounded-lg p-2.5 sm:max-w-[65%] ${
+                        className={`max-w-[calc(100vw-4rem)] rounded-lg ${
+                          row.bubble.type === 'image' ? 'p-1' : 'p-2.5'
+                        } sm:max-w-[65%] ${
                           mine
                             ? 'bg-orange-500 text-white'
                             : 'border border-gray-200 bg-gray-50'
@@ -604,8 +671,23 @@ export default function ChatShell({
                             {row.bubble.text}
                           </div>
                         )}
+                        {row.bubble.type === 'image' && row.bubble.mediaUrl && (
+                          <div className="overflow-hidden rounded">
+                            <img
+                              src={row.bubble.mediaUrl}
+                              alt="Chat image"
+                              className="max-h-60 max-w-full cursor-pointer object-contain"
+                              onClick={() => window.open(row.bubble.mediaUrl, '_blank')}
+                            />
+                            {row.bubble.text && row.bubble.text !== '[Hình ảnh]' && (
+                              <div className={`mt-1 px-1.5 text-sm ${mine ? 'text-white' : 'text-gray-800'}`}>
+                                {row.bubble.text}
+                              </div>
+                            )}
+                          </div>
+                        )}
                         <div
-                          className={`mt-0.5 text-right text-[10px] ${mine ? 'text-orange-50' : 'text-gray-400'}`}>
+                          className={`mt-0.5 text-right text-[10px] ${mine ? 'text-orange-50' : 'text-gray-400'} ${row.bubble.type === 'image' ? 'px-1.5' : ''}`}>
                           {formatChatTime(row.bubble.time)}
                         </div>
                       </div>
@@ -617,6 +699,29 @@ export default function ChatShell({
           </div>
 
           <footer className="shrink-0 border-t border-gray-200 bg-white p-3">
+            {selectedImages.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {selectedImages.map((image) => (
+                  <div
+                    key={image.id}
+                    className="relative h-20 w-20 overflow-hidden rounded-lg border border-gray-200">
+                    <img
+                      src={image.preview}
+                      alt="Preview"
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(image.id)}
+                      className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white transition hover:bg-red-600"
+                      title="Xóa ảnh">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -624,14 +729,6 @@ export default function ChatShell({
                 className="flex h-9 w-9 items-center justify-center text-gray-500 transition hover:text-orange-600"
                 title="Gửi ảnh">
                 <Camera className="h-5 w-5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => audioInputRef.current?.click()}
-                className="flex h-9 w-9 items-center justify-center text-gray-500 transition hover:text-orange-600"
-                title="Gửi âm thanh">
-                <Mic className="h-5 w-5" />
               </button>
 
               <input
@@ -652,7 +749,7 @@ export default function ChatShell({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
-                    sendMessageText(input)
+                    handleSendMessage()
                   }
                 }}
                 disabled={activeConversationId == null}
@@ -662,8 +759,8 @@ export default function ChatShell({
 
               <button
                 type="button"
-                onClick={() => sendMessageText(input)}
-                disabled={activeConversationId == null}
+                onClick={handleSendMessage}
+                disabled={activeConversationId == null || (!input.trim() && selectedImages.length === 0)}
                 className="flex h-9 w-9 items-center justify-center rounded-md bg-orange-500 text-white transition hover:bg-orange-600 disabled:opacity-50">
                 <Send className="h-4 w-4" />
               </button>
@@ -675,19 +772,9 @@ export default function ChatShell({
               accept="image/*"
               multiple
               className="hidden"
-              onChange={() => {
-                handleImageFiles()
+              onChange={(e) => {
+                handleImageFiles(e)
                 if (imageInputRef.current) imageInputRef.current.value = ''
-              }}
-            />
-            <input
-              ref={audioInputRef}
-              type="file"
-              accept="audio/*"
-              className="hidden"
-              onChange={() => {
-                handleAudioFiles()
-                if (audioInputRef.current) audioInputRef.current.value = ''
               }}
             />
           </footer>

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState, useRef } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
@@ -42,12 +42,18 @@ function groupBySeller(items) {
 
 export default function Cart() {
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false)
   const [platformVoucher, setPlatformVoucher] = useState(null) // Voucher sàn
   const [shopVouchers, setShopVouchers] = useState({}) // { shopId: voucherObject }
+
+  // Check if coming from "Buy Now" flow
+  const buyNowMode = location.state?.buyNowMode
+  const selectedItemId = location.state?.selectedItemId
+  const hasProcessedBuyNow = useRef(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: cartQueryKeys.cart,
@@ -95,8 +101,20 @@ export default function Cart() {
   const grouped = useMemo(() => groupBySeller(items), [items])
 
   useEffect(() => {
-    setSelectedIds(new Set(items.map((i) => i.id)))
-  }, [items])
+    if (buyNowMode && selectedItemId && !hasProcessedBuyNow.current && items.length > 0) {
+      // Chế độ "Mua ngay": chỉ chọn sản phẩm được chỉ định (chỉ xử lý một lần)
+      const itemExists = items.some(item => item.id === selectedItemId)
+      if (itemExists) {
+        setSelectedIds(new Set([selectedItemId]))
+        hasProcessedBuyNow.current = true
+        // Clear navigation state
+        navigate(location.pathname, { replace: true, state: {} })
+      }
+    } else if (!buyNowMode && !hasProcessedBuyNow.current) {
+      // Chế độ bình thường: chọn tất cả sản phẩm
+      setSelectedIds(new Set(items.map((i) => i.id)))
+    }
+  }, [items, buyNowMode, selectedItemId, navigate, location.pathname])
 
   const selectedItems = useMemo(
     () => items.filter((i) => selectedIds.has(i.id)),
@@ -313,7 +331,7 @@ export default function Cart() {
 
   return (
     <div className="w-full">
-      <main className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 px-4 py-6 pb-40 lg:px-8 lg:py-8">
+      <main className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 px-4 py-6 pb-[28rem] lg:px-8 lg:py-8">
         <div className="mx-auto max-w-7xl space-y-6">
           {/* Header Card */}
           <div className="rounded-2xl bg-white p-6 shadow-md">
@@ -542,71 +560,26 @@ export default function Cart() {
                   </div>
                 )
               })}
+            </div>
+          )}
 
-              {/* Platform Voucher Section */}
-              <div className="rounded-xl bg-white px-6 py-4 shadow-md">
-                {platformVoucher ? (
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex flex-1 items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-500 text-white">
-                        <svg
-                          className="h-5 w-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                          />
-                        </svg>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-gray-900">
-                            {platformVoucher.title}
-                          </span>
-                          <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
-                            SÀN
-                          </span>
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500">
-                          {platformVoucher.description}
-                        </p>
-                        <div className="mt-2 inline-flex items-center rounded-md border border-dashed border-orange-300 bg-orange-50 px-2 py-1">
-                          <span className="font-mono text-xs font-bold text-orange-700">
-                            {platformVoucher.code}
-                          </span>
-                        </div>
-                        <p className="mt-2 text-sm font-semibold text-green-600">
-                          Giảm: {formatPrice(platformVoucherDiscount)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsVoucherModalOpen(true)}
-                        className="rounded-lg border border-orange-500 bg-white px-4 py-2 text-sm font-medium text-orange-600 transition hover:bg-orange-50">
-                        Đổi
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleRemovePlatformVoucher}
-                        className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50">
-                        Bỏ
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsVoucherModalOpen(true)}
-                    className="flex w-full items-center justify-between rounded-lg border-2 border-dashed border-orange-300 bg-orange-50/50 px-4 py-3 transition hover:border-orange-400 hover:bg-orange-50">
-                    <div className="flex items-center gap-2">
+          {/* Spacer để tránh footer che nội dung */}
+          {items.length > 0 && <div className="h-[280px]" aria-hidden="true" />}
+        </div>
+      </main>
+
+      {/* Footer - Thanh thanh toán cố định */}
+      {items.length > 0 && (
+        <footer className="fixed right-0 bottom-0 left-0 z-20 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
+          <div className="mx-auto max-w-7xl px-4 py-4 lg:px-8">
+            {/* Platform Voucher Section - Moved here */}
+            <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50/30 p-3">
+              {platformVoucher ? (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-1 items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-500 text-white">
                       <svg
-                        className="h-5 w-5 text-orange-500"
+                        className="h-5 w-5"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24">
@@ -617,88 +590,137 @@ export default function Cart() {
                           d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
                         />
                       </svg>
-                      <span className="text-sm font-medium text-gray-700">
-                        Voucher EvoMarket
-                      </span>
                     </div>
-                    <span className="text-sm font-medium text-orange-600">
-                      Chọn voucher →
-                    </span>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </main>
-
-      {/* Footer - Thanh thanh toán cố định */}
-      {items.length > 0 && (
-        <footer className="fixed right-0 bottom-0 left-0 z-20 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
-          <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-8">
-            {/* Left side - Select all & Delete */}
-            <div className="flex items-center gap-4">
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleAll}
-                  className="h-4 w-4 cursor-pointer rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  Chọn tất cả ({items.length})
-                </span>
-              </label>
-              <button
-                type="button"
-                onClick={handleDeleteSelected}
-                disabled={
-                  removeBulkMutation.isPending || selectedIds.size === 0
-                }
-                className="text-sm font-medium text-gray-600 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40">
-                Xóa ({selectedIds.size})
-              </button>
-            </div>
-
-            {/* Right side - Summary & Checkout */}
-            <div className="flex items-center gap-6">
-              {/* Summary */}
-              <div className="text-right">
-                {totalVoucherDiscount > 0 && (
-                  <div className="mb-1 space-y-0.5">
-                    <p className="text-xs text-gray-500">
-                      Tạm tính: {formatPrice(selectedSubtotal)}
-                    </p>
-                    {shopVoucherDiscount > 0 && (
-                      <p className="text-xs text-blue-600">
-                        Giảm shop: -{formatPrice(shopVoucherDiscount)}
-                      </p>
-                    )}
-                    {platformVoucherDiscount > 0 && (
-                      <p className="text-xs text-orange-600">
-                        Giảm sàn: -{formatPrice(platformVoucherDiscount)}
-                      </p>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-900">
+                          {platformVoucher.title}
+                        </span>
+                        <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
+                          SÀN
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <div className="inline-flex items-center rounded-md border border-dashed border-orange-300 bg-orange-50 px-2 py-1">
+                          <span className="font-mono text-xs font-bold text-orange-700">
+                            {platformVoucher.code}
+                          </span>
+                        </div>
+                        <span className="text-sm font-semibold text-green-600">
+                          -{formatPrice(platformVoucherDiscount)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">
-                    Tổng thanh toán ({selectedQty} sản phẩm):
-                  </span>
-                  <span className="text-2xl font-bold text-orange-600">
-                    {formatPrice(finalTotal)}
-                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsVoucherModalOpen(true)}
+                      className="rounded-lg border border-orange-500 bg-white px-3 py-1.5 text-xs font-medium text-orange-600 transition hover:bg-orange-50">
+                      Đổi
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemovePlatformVoucher}
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50">
+                      Bỏ
+                    </button>
+                  </div>
                 </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsVoucherModalOpen(true)}
+                  className="flex w-full items-center justify-between rounded-lg border-2 border-dashed border-orange-300 bg-orange-50/50 px-3 py-2 transition hover:border-orange-400 hover:bg-orange-50">
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="h-5 w-5 text-orange-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                      />
+                    </svg>
+                    <span className="text-sm font-medium text-gray-700">
+                      Voucher EvoMarket
+                    </span>
+                  </div>
+                  <span className="text-sm font-medium text-orange-600">
+                    Chọn voucher →
+                  </span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              {/* Left side - Select all & Delete */}
+              <div className="flex items-center gap-4">
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleAll}
+                    className="h-4 w-4 cursor-pointer rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Chọn tất cả ({items.length})
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleDeleteSelected}
+                  disabled={
+                    removeBulkMutation.isPending || selectedIds.size === 0
+                  }
+                  className="text-sm font-medium text-gray-600 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40">
+                  Xóa ({selectedIds.size})
+                </button>
               </div>
 
-              {/* Checkout button */}
-              <button
-                type="button"
-                onClick={handleCheckout}
-                disabled={selectedIds.size === 0}
-                className={`min-h-[48px] min-w-[180px] rounded-lg px-8 text-sm font-semibold text-white uppercase shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 ${CTA_ORANGE}`}>
-                Mua hàng
-              </button>
+              {/* Right side - Summary & Checkout */}
+              <div className="flex items-center gap-6">
+                {/* Summary */}
+                <div className="text-right">
+                  {totalVoucherDiscount > 0 && (
+                    <div className="mb-1 space-y-0.5">
+                      <p className="text-xs text-gray-500">
+                        Tạm tính: {formatPrice(selectedSubtotal)}
+                      </p>
+                      {shopVoucherDiscount > 0 && (
+                        <p className="text-xs text-blue-600">
+                          Giảm shop: -{formatPrice(shopVoucherDiscount)}
+                        </p>
+                      )}
+                      {platformVoucherDiscount > 0 && (
+                        <p className="text-xs text-orange-600">
+                          Giảm sàn: -{formatPrice(platformVoucherDiscount)}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">
+                      Tổng thanh toán ({selectedQty} sản phẩm):
+                    </span>
+                    <span className="text-2xl font-bold text-orange-600">
+                      {formatPrice(finalTotal)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Checkout button */}
+                <button
+                  type="button"
+                  onClick={handleCheckout}
+                  disabled={selectedIds.size === 0}
+                  className={`min-h-[48px] min-w-[180px] rounded-lg px-8 text-sm font-semibold text-white uppercase shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 ${CTA_ORANGE}`}>
+                  Mua hàng
+                </button>
+              </div>
             </div>
           </div>
         </footer>

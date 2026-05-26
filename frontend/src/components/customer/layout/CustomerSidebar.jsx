@@ -37,7 +37,6 @@ export function CustomerSidebar({ cartCount = 0 }) {
     { title: 'Địa Chỉ', url: '/customer/address' },
     { title: 'Cài Đặt Thông Báo', url: '/customer/notification-settings' },
     { title: 'Những Thiết Lập Riêng Tư', url: '/customer/privacy-settings' },
-    { title: 'Thông Tin Cá Nhân', url: '/customer/personal-info' },
   ]
 
   const menuItems = [
