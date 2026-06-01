@@ -6,8 +6,7 @@ module.exports = {
     const categoriesData = [
       { id: 1, name: 'Mũ' },
       { id: 2, name: 'Kính' },
-      { id: 3, name: 'Hoa tai' },
-      { id: 4, name: 'Vòng cổ' }
+      { id: 3, name: 'Hoa tai' }
     ]
 
     await queryInterface.bulkInsert('Categories', categoriesData, {})

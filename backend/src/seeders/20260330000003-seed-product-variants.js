@@ -24,23 +24,34 @@ module.exports = {
       { id: 15, product_id: 4, size: 'Cặp', color: 'Vàng hồng', stock: 18 },
       { id: 16, product_id: 4, size: 'Cặp', color: 'Mạ vàng 14K', stock: 15 },
 
-      { id: 17, product_id: 5, size: '40cm', color: 'Bạc', stock: 15 },
-      { id: 18, product_id: 5, size: '42cm', color: 'Bạc', stock: 20 },
-      { id: 19, product_id: 5, size: '45cm', color: 'Bạc', stock: 20 },
-      { id: 20, product_id: 5, size: '48cm', color: 'Bạc', stock: 20 },
-      { id: 21, product_id: 5, size: '50cm', color: 'Bạc', stock: 15 },
-
       { id: 22, product_id: 6, size: 'Cặp', color: 'Trắng ngà', stock: 12 },
       { id: 23, product_id: 6, size: 'Cặp', color: 'Đen titan', stock: 15 },
       { id: 24, product_id: 6, size: 'Cặp', color: 'Vàng champagne', stock: 15 },
       { id: 25, product_id: 6, size: 'Cặp', color: 'Bạc sáng', stock: 15 },
       { id: 26, product_id: 6, size: 'Cặp', color: 'Hồng gold', stock: 13 },
 
-      { id: 27, product_id: 7, size: 'OneSize', color: 'Xanh denim', stock: 20 },
-      { id: 28, product_id: 7, size: 'OneSize', color: 'Be kem', stock: 20 },
+      { id: 27, product_id: 7, size: 'Freesize', color: 'Xanh denim', stock: 25 },
+      { id: 28, product_id: 7, size: 'Freesize', color: 'Be kem', stock: 25 },
 
       { id: 29, product_id: 8, size: 'OneSize', color: 'Đen gọng', stock: 55 },
-      { id: 30, product_id: 8, size: 'OneSize', color: 'Nâu tortoise', stock: 55 }
+      { id: 30, product_id: 8, size: 'OneSize', color: 'Nâu tortoise', stock: 55 },
+
+      { id: 31, product_id: 9, size: 'Freesize', color: 'Đen', stock: 25 },
+      { id: 32, product_id: 9, size: 'Freesize', color: 'Xám', stock: 25 },
+      { id: 33, product_id: 9, size: 'Freesize', color: 'Navy', stock: 25 },
+
+      { id: 34, product_id: 11, size: 'OneSize', color: 'Vàng', stock: 20 },
+      { id: 35, product_id: 11, size: 'OneSize', color: 'Bạc', stock: 23 },
+
+      { id: 36, product_id: 12, size: 'Cặp', color: 'Bạc 925', stock: 35 },
+      { id: 37, product_id: 12, size: 'Cặp', color: 'Vàng hồng', stock: 42 },
+
+      { id: 38, product_id: 13, size: 'Freesize', color: 'Đen', stock: 30 },
+      { id: 39, product_id: 13, size: 'Freesize', color: 'Trắng', stock: 28 },
+      { id: 40, product_id: 13, size: 'Freesize', color: 'Navy', stock: 14 },
+
+      { id: 41, product_id: 15, size: 'OneSize', color: 'Vàng kim loại', stock: 22 },
+      { id: 42, product_id: 15, size: 'OneSize', color: 'Bạc kim loại', stock: 22 }
     ]
 
     await queryInterface.bulkInsert('ProductVariants', variantsData, {})

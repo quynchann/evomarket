@@ -8,7 +8,6 @@ module.exports = {
       { id: 2, user_id: 2, product_id: 3, variant_id: 10, quantity: 1 },
       { id: 3, user_id: 3, product_id: 2, variant_id: 6, quantity: 1 },
       { id: 4, user_id: 3, product_id: 7, variant_id: 27, quantity: 1 },
-      { id: 5, user_id: 4, product_id: 5, variant_id: 19, quantity: 1 },
       { id: 6, user_id: 4, product_id: 8, variant_id: 29, quantity: 2 }
     ]
 

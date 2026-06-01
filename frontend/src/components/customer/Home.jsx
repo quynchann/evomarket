@@ -1,412 +1,550 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "../../stores/useAuthStore";
-import { useQuery } from "@tanstack/react-query";
-import * as productApi from "../../services/productApi";
-import logoEvo from "../../assets/logo-evo.png";
-import { HOME_BANNER_SLIDES } from "./homeBannerSlides";
-import Footer from "./Footer";
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import * as productApi from '../../services/productApi'
+import Footer from './Footer'
+import bannerSummer from '../../assets/banner-summer-clean.png'
+import bannerJewelry from '../../assets/banner-jewelry-elegant.png'
+import bannerHats from '../../assets/banner-hats.png'
 
 export default function HomePage() {
-  const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const [featuredIndex, setFeaturedIndex] = useState(0);
-  const [productsIndex, setProductsIndex] = useState(0);
+  const navigate = useNavigate()
+  const [bannerIndex, setBannerIndex] = useState(0)
 
   // Fetch categories from API
   const { data: categoriesData } = useQuery({
-    queryKey: ["categories"],
+    queryKey: ['categories'],
     queryFn: productApi.getCategories,
-  });
+  })
 
   // Fetch featured products from API
   const { data: featuredData, isLoading: isFeaturedLoading } = useQuery({
-    queryKey: ["featured-products"],
+    queryKey: ['featured-products'],
     queryFn: () => productApi.getFeaturedProducts(16),
-  });
+  })
 
   // Fetch all products from API
   const { data: productsData, isLoading: isProductsLoading } = useQuery({
-    queryKey: ["products"],
+    queryKey: ['products'],
     queryFn: () => productApi.getProducts({ limit: 16 }),
-  });
+  })
 
-  const categories = categoriesData?.data || [];
-  const featuredProducts = featuredData?.data || [];
-  const products = productsData?.data || [];
+  const categories = categoriesData?.data || []
+  const featuredProducts = featuredData?.data || []
+  const products = productsData?.data || []
 
   // Format price helper
   const formatPrice = (price) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(price);
-  };
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(price)
+  }
 
   const scrollToSection = (id) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth" });
-  };
+    const el = document.getElementById(id)
+    if (el) el.scrollIntoView({ behavior: 'smooth' })
+  }
 
-  const [bannerIndex, setBannerIndex] = useState(0);
+  const bannerSlides = [
+    {
+      title: 'HELLO SUMMER',
+      heading: 'Tỏa sáng rực rỡ ngày hè',
+      subtitle: 'Kính mát thời trang – Bảo vệ toàn diện',
+      discount: '30%',
+      image: bannerSummer,
+    },
+    {
+      title: 'TRENDY HATS',
+      heading: 'Mũ phong cách cho mọi dịp',
+      subtitle: 'Mũ bucket, mũ lưỡi trai – Bảo vệ tối ưu',
+      discount: '25%',
+      image: bannerHats,
+    },
+    {
+      title: 'ELEGANT JEWELRY',
+      heading: 'Hoa tai tinh tế nổi bật',
+      subtitle: 'Trang sức cao cấp – Tôn vinh vẻ đẹp',
+      discount: '20%',
+      image: bannerJewelry,
+    },
+  ]
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setBannerIndex((prev) => (prev + 1) % HOME_BANNER_SLIDES.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const ActiveBannerSlide = HOME_BANNER_SLIDES[bannerIndex];
+      setBannerIndex((prev) => (prev + 1) % bannerSlides.length)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [bannerSlides.length])
 
   return (
     <>
-      <div className="w-full p-4 lg:p-6">
-        <div className="mx-auto max-w-7xl">
-              {/* Welcome */}
-              <section className="rounded-2xl bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 p-5 text-white shadow-xl lg:p-6">
-                <h2 className="text-base font-bold lg:text-lg">
-                  Chào mừng trở lại, {user?.fullname || "Nguyễn Văn A"}! 👋
-                </h2>
-                <p className="mt-1 text-xs lg:text-sm text-orange-50">Cùng EvoMarket khám phá xu hướng mới hôm nay!</p>
-              </section>
-
-              {/* Banner động — SVG nhúng trong homeBannerSlides.jsx (không tải file ngoài) */}
-              <section className="relative mt-5 h-44 overflow-hidden rounded-2xl shadow-xl lg:h-72">
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-600 to-red-700">
-                  <ActiveBannerSlide
-                    key={bannerIndex}
-                    className="h-full w-full transition-opacity duration-700"
+      <div className="w-full bg-gray-50">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          {/* Hero Banner - Carousel */}
+          <section className="relative mt-6 h-[400px] overflow-hidden rounded-2xl">
+            {/* Banner Slides */}
+            {bannerSlides.map((slide, idx) => (
+              <div
+                key={idx}
+                className={`absolute inset-0 transition-opacity duration-1000 ${
+                  idx === bannerIndex ? 'opacity-100' : 'opacity-0'
+                }`}>
+                {/* Background Image */}
+                <div className="absolute inset-0">
+                  <img
+                    src={slide.image}
+                    alt={slide.heading}
+                    className="h-full w-full object-cover"
                   />
+                  <div className="absolute inset-0 bg-linear-to-r from-white/95 via-white/80 to-transparent"></div>
                 </div>
 
-              {/* Nút chuyển trái / phải */}
-              <button
-                onClick={() =>
-                  setBannerIndex((prev) =>
-                    prev === 0 ? HOME_BANNER_SLIDES.length - 1 : prev - 1,
-                  )
-                }
-                className="absolute top-1/2 left-3 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/80 backdrop-blur text-xl text-gray-700 shadow-lg transition hover:bg-white hover:scale-110"
-              >
-                ‹
-              </button>
-              <button
-                onClick={() =>
-                  setBannerIndex((prev) =>
-                    prev === HOME_BANNER_SLIDES.length - 1 ? 0 : prev + 1,
-                  )
-                }
-                className="absolute top-1/2 right-3 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/80 backdrop-blur text-xl text-gray-700 shadow-lg transition hover:bg-white hover:scale-110"
-              >
-                ›
-              </button>
+                <div className="absolute inset-0 flex items-center">
+                  <div className="container mx-auto px-8 lg:px-16">
+                    <div className="flex items-center justify-between">
+                      {/* Left Content */}
+                      <div className="z-10 max-w-xl">
+                        <div className="mb-4 flex items-center gap-2">
+                          <div className="text-orange-500">
+                            <svg
+                              className="h-8 w-8"
+                              fill="currentColor"
+                              viewBox="0 0 20 20">
+                              <path
+                                fillRule="evenodd"
+                                d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </div>
+                          <span className="text-sm font-semibold tracking-wider text-orange-500 uppercase">
+                            {slide.title}
+                          </span>
+                        </div>
+                        <h1 className="mb-3 text-4xl leading-tight font-bold text-orange-600 lg:text-5xl">
+                          {slide.heading}
+                        </h1>
+                        <p className="mb-6 text-base text-gray-700">
+                          {slide.subtitle}
+                        </p>
+                        <button
+                          onClick={() => scrollToSection('noibat')}
+                          className="transform rounded-lg bg-orange-500 px-8 py-3 text-sm font-bold text-white uppercase shadow-lg transition-all hover:scale-105 hover:bg-orange-600">
+                          KHÁM PHÁ NGAY
+                        </button>
+                      </div>
 
-              {/* Chấm nhỏ hiển thị vị trí */}
-              <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-black/30 backdrop-blur px-3 py-2">
-                {HOME_BANNER_SLIDES.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setBannerIndex(i)}
-                    className={`h-2 w-2 rounded-full transition-all ${
-                      i === bannerIndex ? "bg-white w-6" : "bg-white/60 hover:bg-white/80"
-                    }`}
-                  ></button>
+                      {/* Right Content - Discount Badge */}
+                      <div className="hidden lg:block">
+                        <div className="relative">
+                          <div className="flex h-32 w-32 items-center justify-center rounded-full bg-orange-500 text-white shadow-2xl">
+                            <div className="text-center">
+                              <div className="mb-1 text-xs font-medium">
+                                UP TO
+                              </div>
+                              <div className="text-4xl font-bold">
+                                {slide.discount}
+                              </div>
+                              <div className="text-xs font-medium">OFF</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Navigation Arrows */}
+            <button
+              onClick={() =>
+                setBannerIndex((prev) =>
+                  prev === 0 ? bannerSlides.length - 1 : prev - 1,
+                )
+              }
+              className="absolute top-1/2 left-4 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 shadow-lg transition-all hover:scale-110 hover:bg-white">
+              <svg
+                className="h-6 w-6 text-gray-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+            <button
+              onClick={() =>
+                setBannerIndex((prev) =>
+                  prev === bannerSlides.length - 1 ? 0 : prev + 1,
+                )
+              }
+              className="absolute top-1/2 right-4 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 shadow-lg transition-all hover:scale-110 hover:bg-white">
+              <svg
+                className="h-6 w-6 text-gray-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+
+            {/* Carousel Indicators */}
+            <div className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 transform gap-2">
+              {bannerSlides.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setBannerIndex(i)}
+                  className={`h-2 rounded-full transition-all ${
+                    i === bannerIndex
+                      ? 'w-8 bg-orange-500'
+                      : 'w-2 bg-white/60 hover:bg-white'
+                  }`}
+                />
+              ))}
+            </div>
+          </section>
+
+          {/* Category Cards */}
+          <section className="py-8">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+              {[
+                {
+                  name: 'Mũ',
+                  desc: 'Phong cách đa dạng, bảo vệ tối ưu',
+                  image:
+                    'https://images.unsplash.com/photo-1521369909029-2afed882baee?w=400&h=300&fit=crop&q=80',
+                  id: categories.find((c) => c.name === 'Mũ')?.id,
+                },
+                {
+                  name: 'Kính',
+                  desc: 'Thời trang sành điệu, bảo vệ mắt',
+                  image:
+                    'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=300&fit=crop&q=80',
+                  id: categories.find((c) => c.name === 'Kính')?.id,
+                },
+                {
+                  name: 'Hoa tai',
+                  desc: 'Tinh tế, nữ tính và nổi bật',
+                  image:
+                    'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=400&h=300&fit=crop&q=80',
+                  id: categories.find((c) => c.name === 'Hoa tai')?.id,
+                },
+              ].map((cat, idx) => (
+                <div
+                  key={idx}
+                  onClick={() =>
+                    cat.id && navigate(`/customer/categories/${cat.id}`)
+                  }
+                  className="group relative cursor-pointer overflow-hidden rounded-2xl bg-white shadow-sm transition-all hover:shadow-lg">
+                  <div className="flex items-center">
+                    <div className="relative h-24 w-40 shrink-0">
+                      <img
+                        src={cat.image}
+                        alt={cat.name}
+                        className="h-full w-full object-cover"
+                      />
+                      {/* Gradient overlay for smooth fade effect */}
+                      <div className="absolute inset-y-0 right-0 w-12 bg-linear-to-r from-transparent to-white"></div>
+                    </div>
+                    <div className="grow py-3 pr-4 pl-2">
+                      <h3 className="mb-1 text-base font-bold text-gray-800">
+                        {cat.name}
+                      </h3>
+                      <p className="text-xs leading-relaxed text-gray-500">
+                        {cat.desc}
+                      </p>
+                    </div>
+                    <div className="shrink-0 pr-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500 text-white shadow-md transition-colors group-hover:bg-orange-600">
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2.5}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Featured Products */}
+          <section id="noibat" className="py-8">
+            <div className="mb-6 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-800">
+                Sản phẩm nổi bật
+              </h3>
+              <button
+                onClick={() => navigate('/customer/products')}
+                className="flex items-center gap-1 text-sm font-medium text-orange-500 transition hover:text-orange-600">
+                Xem tất cả
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
+            {isFeaturedLoading ? (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="animate-pulse rounded-lg bg-gray-100">
+                    <div className="h-40 w-full rounded-t-lg bg-gray-200"></div>
+                    <div className="p-3">
+                      <div className="mb-2 h-3 rounded bg-gray-200"></div>
+                      <div className="h-4 w-2/3 rounded bg-gray-200"></div>
+                    </div>
+                  </div>
                 ))}
               </div>
-              </section>
+            ) : featuredProducts.length > 0 ? (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {featuredProducts.slice(0, 4).map((p, idx) => {
+                  const discounts = ['-20%', '-25%', '-30%', '-15%', '-20%']
+                  const discount = discounts[idx % discounts.length]
+                  const oldPrice =
+                    p.price * (1 + Math.abs(parseInt(discount)) / 100)
 
-              {/* Danh mục sản phẩm */}
-              <section id="danhmuc" className="mt-8 scroll-mt-28 lg:mt-10">
-                <div className="mb-6 flex items-center gap-3">
-                  <span className="text-3xl">🌸</span>
-                  <h3 className="text-xl font-bold text-gray-800 lg:text-2xl">
-                    Danh mục sản phẩm
-                  </h3>
-                </div>
-                <div className="grid grid-cols-2 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-8">
-                  {categories.length > 0 ? (
-                    categories.map((cat) => (
-                      <div
-                        key={cat.id}
-                        className="group flex flex-col items-center rounded-3xl bg-white p-8 text-base font-semibold text-gray-700 shadow-lg transition-all hover:shadow-2xl hover:-translate-y-3 cursor-pointer border-2 border-gray-100 hover:border-orange-300"
-                        onClick={() =>
-                          navigate(`/customer/categories/${cat.id}`)
-                        }
-                      >
-                        <div className="mb-5 flex h-32 w-32 items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-br from-orange-400 to-red-500 shadow-xl transition-transform group-hover:scale-110 group-hover:rotate-3">
-                          {["Mũ", "Kính", "Hoa tai", "Vòng cổ"].includes(cat.name) ? (
-                            <span className="text-5xl">
-                              {cat.name === "Mũ" && "🧢"}
-                              {cat.name === "Kính" && "🕶️"}
-                              {cat.name === "Hoa tai" && "💍"}
-                              {cat.name === "Vòng cổ" && "📿"}
-                            </span>
-                          ) : (
-                            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white p-3">
-                              <img src={logoEvo} alt="Category" className="h-full w-full object-contain" />
-                            </div>
-                          )}
+                  return (
+                    <div
+                      key={p.id}
+                      className="group cursor-pointer overflow-hidden rounded-lg bg-white shadow-sm transition-all hover:shadow-md"
+                      onClick={() => navigate(`/customer/products/${p.id}`)}>
+                      <div className="relative">
+                        <img
+                          src={p.thumbnail || 'https://via.placeholder.com/300'}
+                          alt={p.title}
+                          className="h-40 w-full object-cover"
+                          onError={(e) => {
+                            e.target.src =
+                              'https://via.placeholder.com/300?text=No+Image'
+                          }}
+                        />
+                        <div className="absolute top-2 left-2 flex h-10 w-10 items-center justify-center rounded-full bg-orange-500 text-xs font-bold text-white shadow">
+                          {discount}
                         </div>
-                        <p className="text-center text-lg font-bold text-gray-800">{cat.name}</p>
-                        <p className="mt-2 text-base text-orange-600 font-semibold">{cat.productCount} sản phẩm</p>
                       </div>
-                    ))
-                  ) : (
-                    <div className="col-span-full text-center text-gray-500 py-12 bg-gray-50 rounded-xl">
-                      Đang tải danh mục...
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              {/* Flash Sale */}
-              <section id="flashsale" className="mt-8 scroll-mt-28 lg:mt-10">
-                <div className="mb-6 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">⚡</span>
-                    <h3 className="text-xl font-bold text-gray-800 lg:text-2xl">
-                      Sản phẩm bán chạy
-                    </h3>
-                    {!isFeaturedLoading && featuredProducts.length > 4 && (
-                      <span className="ml-2 rounded-full bg-orange-100 px-3 py-1 text-sm font-semibold text-orange-600">
-                        {Math.floor(featuredIndex / 4) + 1}/{Math.ceil(featuredProducts.length / 4)}
-                      </span>
-                    )}
-                  </div>
-                  <button className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition">
-                    Xem tất cả →
-                  </button>
-                </div>
-                {isFeaturedLoading ? (
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="animate-pulse rounded-2xl bg-gray-200 p-4">
-                        <div className="h-56 w-full rounded-xl bg-gray-300 lg:h-64"></div>
-                        <div className="mt-4 h-5 rounded bg-gray-300"></div>
-                        <div className="mt-3 h-5 w-2/3 rounded bg-gray-300"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : featuredProducts.length > 0 ? (
-                  <div className="relative">
-                    {/* Prev Button */}
-                    {featuredIndex > 0 && (
-                      <button
-                        onClick={() => setFeaturedIndex(Math.max(0, featuredIndex - 4))}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-2xl transition-all hover:scale-110 hover:bg-orange-500 hover:text-white border-2 border-gray-200"
-                      >
-                        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-                    )}
-
-                    {/* Products Grid */}
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-                      {featuredProducts.slice(featuredIndex, featuredIndex + 4).map((p) => (
-                        <div
-                          key={p.id}
-                          className="group rounded-2xl bg-white p-5 shadow-lg border-2 border-gray-100 transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-orange-300 cursor-pointer"
-                          onClick={() => navigate(`/customer/products/${p.id}`)}
-                        >
-                          <div className="relative overflow-hidden rounded-xl">
-                            <img
-                              src={p.thumbnail || 'https://via.placeholder.com/300'}
-                              alt={p.title}
-                              className="h-56 w-full rounded-xl object-cover transition-transform group-hover:scale-110 lg:h-64"
-                              onError={(e) => {
-                                e.target.src = 'https://via.placeholder.com/300?text=No+Image';
-                              }}
-                            />
-                            {!p.inStock && (
-                              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-sm">
-                                <span className="rounded-xl bg-red-500 px-4 py-2 text-sm font-bold text-white shadow-lg">
-                                  Hết hàng
-                                </span>
-                              </div>
-                            )}
-                            <div className="absolute top-3 right-3 rounded-full bg-red-500 px-3 py-1.5 text-sm font-bold text-white shadow-lg">
-                              🔥 Hot
-                            </div>
-                          </div>
-                          <div className="mt-4">
-                            <p className="line-clamp-2 text-base font-bold text-gray-800 min-h-[3rem]">{p.title}</p>
-                            <div className="mt-3 flex items-center justify-between">
-                              <p className="text-xl font-bold text-red-600">{formatPrice(p.price)}</p>
-                            </div>
-                            <div className="mt-3 flex items-center justify-between text-sm">
-                              <span className="text-gray-600 font-medium">Đã bán {p.sold}</span>
-                              <span className="flex items-center gap-1 text-yellow-500 text-base">
-                                ★★★★★
-                              </span>
-                            </div>
-                          </div>
+                      <div className="p-3">
+                        <p className="mb-2 line-clamp-2 h-10 text-sm text-gray-800">
+                          {p.title}
+                        </p>
+                        <div className="mb-1 flex items-center gap-2">
+                          <p className="text-base font-bold text-orange-600">
+                            {formatPrice(p.price)}
+                          </p>
+                          <p className="text-xs text-gray-400 line-through">
+                            {formatPrice(oldPrice)}
+                          </p>
                         </div>
-                      ))}
+                      </div>
                     </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="rounded-xl bg-gray-50 py-12 text-center text-gray-500">
+                Không có sản phẩm nào
+              </div>
+            )}
+          </section>
 
-                    {/* Next Button */}
-                    {featuredIndex + 4 < featuredProducts.length && (
-                      <button
-                        onClick={() => setFeaturedIndex(Math.min(featuredProducts.length - 4, featuredIndex + 4))}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-2xl transition-all hover:scale-110 hover:bg-orange-500 hover:text-white border-2 border-gray-200"
-                      >
-                        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    )}
-
-                    {/* Pagination Dots */}
-                    {featuredProducts.length > 4 && (
-                      <div className="mt-6 flex justify-center gap-2">
-                        {Array.from({ length: Math.ceil(featuredProducts.length / 4) }).map((_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setFeaturedIndex(i * 4)}
-                            className={`h-2.5 rounded-full transition-all ${
-                              Math.floor(featuredIndex / 4) === i 
-                                ? 'w-8 bg-orange-500' 
-                                : 'w-2.5 bg-gray-300 hover:bg-orange-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-500 py-12 bg-gray-50 rounded-xl">
-                    Không có sản phẩm nào
-                  </div>
-                )}
-              </section>
-
-              {/* Sản phẩm nổi bật */}
-              <section id="noibat" className="mt-8 scroll-mt-28 lg:mt-10">
-                <div className="mb-6 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">🔥</span>
-                    <h3 className="text-xl font-bold text-gray-800 lg:text-2xl">
-                      Sản phẩm mới nhất
-                    </h3>
-                    {!isProductsLoading && products.length > 4 && (
-                      <span className="ml-2 rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-600">
-                        {Math.floor(productsIndex / 4) + 1}/{Math.ceil(products.length / 4)}
-                      </span>
-                    )}
-                  </div>
-                  <button className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition">
-                    Xem tất cả →
-                  </button>
-                </div>
-                {isProductsLoading ? (
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="animate-pulse rounded-2xl bg-gray-200 p-4">
-                        <div className="h-56 w-full rounded-xl bg-gray-300 lg:h-64"></div>
-                        <div className="mt-4 h-5 rounded bg-gray-300"></div>
-                        <div className="mt-3 h-5 w-2/3 rounded bg-gray-300"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : products.length > 0 ? (
-                  <div className="relative">
-                    {/* Prev Button */}
-                    {productsIndex > 0 && (
-                      <button
-                        onClick={() => setProductsIndex(Math.max(0, productsIndex - 4))}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-2xl transition-all hover:scale-110 hover:bg-orange-500 hover:text-white border-2 border-gray-200"
-                      >
-                        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-                    )}
-
-                    {/* Products Grid */}
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-                      {products.slice(productsIndex, productsIndex + 4).map((p) => (
-                        <div
-                          key={p.id}
-                          className="group rounded-2xl bg-white p-5 shadow-lg border-2 border-gray-100 transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-orange-300 cursor-pointer"
-                          onClick={() => navigate(`/customer/products/${p.id}`)}
-                        >
-                          <div className="relative overflow-hidden rounded-xl">
-                            <img
-                              src={p.thumbnail || 'https://via.placeholder.com/300'}
-                              alt={p.title}
-                              className="h-56 w-full rounded-xl object-cover transition-transform group-hover:scale-110 lg:h-64"
-                              onError={(e) => {
-                                e.target.src = 'https://via.placeholder.com/300?text=No+Image';
-                              }}
-                            />
-                            {!p.inStock && (
-                              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-sm">
-                                <span className="rounded-xl bg-red-500 px-4 py-2 text-sm font-bold text-white shadow-lg">
-                                  Hết hàng
-                                </span>
-                              </div>
-                            )}
-                            <div className="absolute top-3 left-3 rounded-full bg-green-500 px-3 py-1.5 text-sm font-bold text-white shadow-lg">
-                              Mới
-                            </div>
-                          </div>
-                          <div className="mt-4">
-                            <p className="line-clamp-2 text-base font-bold text-gray-800 min-h-[3rem]">{p.title}</p>
-                            <div className="mt-3 flex items-center justify-between">
-                              <p className="text-xl font-bold text-orange-600">{formatPrice(p.price)}</p>
-                            </div>
-                            <div className="mt-3 flex items-center justify-between text-sm">
-                              <span className="text-gray-600 font-medium">Kho: {p.stock}</span>
-                              <span className="flex items-center gap-1 text-yellow-500 text-base">
-                                ★★★★★
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Next Button */}
-                    {productsIndex + 4 < products.length && (
-                      <button
-                        onClick={() => setProductsIndex(Math.min(products.length - 4, productsIndex + 4))}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-2xl transition-all hover:scale-110 hover:bg-orange-500 hover:text-white border-2 border-gray-200"
-                      >
-                        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    )}
-
-                    {/* Pagination Dots */}
-                    {products.length > 4 && (
-                      <div className="mt-6 flex justify-center gap-2">
-                        {Array.from({ length: Math.ceil(products.length / 4) }).map((_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setProductsIndex(i * 4)}
-                            className={`h-2.5 rounded-full transition-all ${
-                              Math.floor(productsIndex / 4) === i 
-                                ? 'w-8 bg-green-500' 
-                                : 'w-2.5 bg-gray-300 hover:bg-green-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-500 py-12 bg-gray-50 rounded-xl">
-                    Không có sản phẩm nào
-                  </div>
-                )}
-              </section>
+          {/* New Arrivals */}
+          <section className="py-8">
+            <div className="mb-6 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-800">
+                Sản phẩm mới về
+              </h3>
+              <button
+                onClick={() => navigate('/customer/products')}
+                className="flex items-center gap-1 text-sm font-medium text-orange-500 transition hover:text-orange-600">
+                Xem tất cả
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
             </div>
-          </div>
+            {isProductsLoading ? (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="animate-pulse rounded-lg bg-gray-100">
+                    <div className="h-40 w-full rounded-t-lg bg-gray-200"></div>
+                    <div className="p-3">
+                      <div className="mb-2 h-3 rounded bg-gray-200"></div>
+                      <div className="h-4 w-2/3 rounded bg-gray-200"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : products.length > 0 ? (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {products.slice(0, 4).map((p) => (
+                  <div
+                    key={p.id}
+                    className="group cursor-pointer overflow-hidden rounded-lg bg-white shadow-sm transition-all hover:shadow-md"
+                    onClick={() => navigate(`/customer/products/${p.id}`)}>
+                    <div className="relative">
+                      <img
+                        src={p.thumbnail || 'https://via.placeholder.com/300'}
+                        alt={p.title}
+                        className="h-40 w-full object-cover"
+                        onError={(e) => {
+                          e.target.src =
+                            'https://via.placeholder.com/300?text=No+Image'
+                        }}
+                      />
+                      <div className="absolute top-2 left-2 rounded bg-green-500 px-3 py-1 text-xs font-bold text-white">
+                        MỚI
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <p className="mb-2 line-clamp-2 h-10 text-sm text-gray-800">
+                        {p.title}
+                      </p>
+                      <p className="text-base font-bold text-orange-600">
+                        {formatPrice(p.price)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl bg-white py-12 text-center text-gray-500">
+                Không có sản phẩm nào
+              </div>
+            )}
+          </section>
+
+          {/* Features Section */}
+          <section className="py-8">
+            <div className="rounded-xl bg-white px-8 py-5 shadow-sm">
+              <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+                <div className="flex flex-col items-center text-center">
+                  <div className="mb-3 h-12 w-12">
+                    <svg
+                      className="h-full w-full text-orange-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                      />
+                    </svg>
+                  </div>
+                  <h4 className="mb-1 text-sm font-bold text-gray-800">
+                    Miễn phí vận chuyển
+                  </h4>
+                  <p className="text-xs text-gray-500">
+                    Cho đơn hàng từ 299.000đ
+                  </p>
+                </div>
+
+                <div className="flex flex-col items-center text-center">
+                  <div className="mb-3 h-12 w-12">
+                    <svg
+                      className="h-full w-full text-orange-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  </div>
+                  <h4 className="mb-1 text-sm font-bold text-gray-800">
+                    Đổi trả dễ dàng
+                  </h4>
+                  <p className="text-xs text-gray-500">Đổi trả trong 7 ngày</p>
+                </div>
+
+                <div className="flex flex-col items-center text-center">
+                  <div className="mb-3 h-12 w-12">
+                    <svg
+                      className="h-full w-full text-orange-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                      />
+                    </svg>
+                  </div>
+                  <h4 className="mb-1 text-sm font-bold text-gray-800">
+                    Thanh toán an toàn
+                  </h4>
+                  <p className="text-xs text-gray-500">Đa dạng phương thức</p>
+                </div>
+
+                <div className="flex flex-col items-center text-center">
+                  <div className="mb-3 h-12 w-12">
+                    <svg
+                      className="h-full w-full text-orange-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                      />
+                    </svg>
+                  </div>
+                  <h4 className="mb-1 text-sm font-bold text-gray-800">
+                    Chính hàng 100%
+                  </h4>
+                  <p className="text-xs text-gray-500">Cam kết chất lượng</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
 
       <Footer />
     </>
-  );
+  )
 }

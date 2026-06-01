@@ -22,7 +22,7 @@ module.exports = {
       },
       {
         id: 3,
-        product_id: 5,
+        product_id: 8,
         discount_type: 'Percentage',
         discount_value: 15.00,
         start_date: new Date('2026-03-20'),

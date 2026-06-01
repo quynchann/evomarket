@@ -50,24 +50,11 @@ module.exports = {
         email: 'buyer1@test.com',
         phone: '0901234567',
         address: '123 Nguyễn Huệ, Hoàn Kiếm, Hà Nội',
-        total_price: 350000,
-        payment_method: 'COD',
-        status: 'PENDING_CONFIRMATION',
-        created_at: new Date('2026-03-28'),
-        updated_at: new Date('2026-03-28')
-      },
-      {
-        id: 5,
-        user_id: 3,
-        fullname: 'Trần Thị B',
-        email: 'buyer2@test.com',
-        phone: '0902345678',
-        address: '789 Lê Lợi, Quận 1, Hồ Chí Minh',
         total_price: 280000,
         payment_method: 'Online',
         status: 'CANCELLED',
-        created_at: new Date('2026-03-10'),
-        updated_at: new Date('2026-03-11')
+        created_at: new Date('2026-03-28'),
+        updated_at: new Date('2026-03-28')
       }
     ]
 

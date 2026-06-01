@@ -103,27 +103,6 @@ module.exports = {
         deleted: false
       },
       {
-        id: 5,
-        category_id: 4,
-        seller_id: seller1,
-        title: 'Vòng cổ dây chuyền mảnh layering',
-        price: 450000,
-        import_price: 360000,
-        profit_margin: 90000,
-        quantity: '40–50cm',
-        thumbnail:
-          'https://images.unsplash.com/photo-1599643478518-a784e5da4fb8?auto=format&fit=crop&q=80&w=600',
-        images: JSON.stringify([
-          'https://images.unsplash.com/photo-1599643478518-a784e5da4fb8?auto=format&fit=crop&q=80&w=800',
-          'https://images.unsplash.com/photo-1599643477877-29f425d7b8a4?auto=format&fit=crop&q=80&w=800'
-        ]),
-        description: 'Dây chuyền mảnh có thể đeo một mình hoặc phối nhiều lớp.',
-        total_stock: 90,
-        sold: 25,
-        available: 65,
-        deleted: false
-      },
-      {
         id: 6,
         category_id: 3,
         seller_id: seller1,
@@ -207,26 +186,6 @@ module.exports = {
         deleted: false
       },
       {
-        id: 10,
-        category_id: 4,
-        seller_id: seller1,
-        title: 'Vòng tay charm may mắn',
-        price: 220000,
-        import_price: 170000,
-        profit_margin: 50000,
-        quantity: 'Adjustable',
-        thumbnail:
-          'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?auto=format&fit=crop&q=80&w=600',
-        images: JSON.stringify([
-          'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?auto=format&fit=crop&q=80&w=800'
-        ]),
-        description: 'Vòng tay charm phong cách tối giản, dễ điều chỉnh size, mang lại may mắn.',
-        total_stock: 55,
-        sold: 14,
-        available: 41,
-        deleted: false
-      },
-      {
         id: 11,
         category_id: 2,
         seller_id: seller1,
@@ -284,26 +243,6 @@ module.exports = {
         total_stock: 88,
         sold: 16,
         available: 72,
-        deleted: false
-      },
-      {
-        id: 14,
-        category_id: 4,
-        seller_id: seller3,
-        title: 'Nhẫn bạc đính đá CZ',
-        price: 350000,
-        import_price: 270000,
-        profit_margin: 80000,
-        quantity: 'Size 6-9',
-        thumbnail:
-          'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&q=80&w=600',
-        images: JSON.stringify([
-          'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&q=80&w=800'
-        ]),
-        description: 'Nhẫn bạc 925 đính đá CZ lấp lánh, thiết kế sang trọng.',
-        total_stock: 45,
-        sold: 9,
-        available: 36,
         deleted: false
       },
       {

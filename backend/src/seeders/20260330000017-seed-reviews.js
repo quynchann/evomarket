@@ -40,12 +40,12 @@ module.exports = {
       {
         id: 4,
         user_id: 4,
-        product_id: 5,
-        rating: 3,
-        comment: 'Vòng cổ xinh nhưng khóa hơi nhỏ, cần cẩn thận khi tháo.',
-        is_reported: true,
-        report_reason: 'Ngôn ngữ không phù hợp',
-        report_status: 'Pending',
+        product_id: 4,
+        rating: 5,
+        comment: 'Hoa tai đẹp, chất liệu bạc 925 thật, không gây dị ứng. Rất hài lòng!',
+        is_reported: false,
+        report_reason: null,
+        report_status: null,
         created_at: new Date('2026-03-27')
       }
     ]

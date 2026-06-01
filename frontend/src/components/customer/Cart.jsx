@@ -12,6 +12,7 @@ import { ShoppingCart } from 'lucide-react'
 import logoEvo from '../../assets/logo-evo.png'
 import VoucherModal from './VoucherModal'
 import ShopVoucherSection from './ShopVoucherSection'
+import { AlertDialog } from '../ui/alert-dialog'
 
 /** Màu CTA + khung layout rộng, tông cam */
 const CTA_ORANGE = 'bg-[#ee4d2d] hover:bg-[#d73211]'
@@ -49,6 +50,8 @@ export default function Cart() {
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false)
   const [platformVoucher, setPlatformVoucher] = useState(null) // Voucher sàn
   const [shopVouchers, setShopVouchers] = useState({}) // { shopId: voucherObject }
+  const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', description: '' })
+  const [tempQuantities, setTempQuantities] = useState({}) // Temporary input values
 
   // Check if coming from "Buy Now" flow
   const buyNowMode = location.state?.buyNowMode
@@ -319,6 +322,53 @@ export default function Cart() {
     toast.success('Đã bỏ voucher shop')
   }
 
+  const handleQuantityInputChange = (itemId, value) => {
+    setTempQuantities(prev => ({
+      ...prev,
+      [itemId]: value
+    }))
+  }
+
+  const handleQuantityBlur = (item) => {
+    const inputValue = tempQuantities[item.id]
+    const newQuantity = inputValue !== undefined ? inputValue : item.quantity
+    const qty = parseInt(newQuantity, 10)
+    
+    // Clear temp value
+    setTempQuantities(prev => {
+      const next = { ...prev }
+      delete next[item.id]
+      return next
+    })
+    
+    // Validate number
+    if (isNaN(qty) || qty < 1 || newQuantity === '') {
+      toast.error('Vui lòng nhập số lượng hợp lệ (từ 1 trở lên)')
+      return
+    }
+
+    // Check if exceeds stock
+    if (qty > item.maxQuantity) {
+      setAlertDialog({
+        isOpen: true,
+        title: 'Số lượng vượt quá giới hạn',
+        description: `Sản phẩm "${item.title}" chỉ còn ${item.maxQuantity} sản phẩm trong kho. Vui lòng nhập số lượng nhỏ hơn hoặc bằng ${item.maxQuantity}.`
+      })
+      return
+    }
+
+    // If quantity hasn't changed, do nothing
+    if (qty === item.quantity) {
+      return
+    }
+
+    // Update quantity
+    updateMutation.mutate({
+      id: item.id,
+      quantity: qty,
+    })
+  }
+
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-orange-100/80 via-orange-50/50 to-amber-50/30 p-6">
@@ -490,39 +540,60 @@ export default function Cart() {
                             <span className="text-xs text-gray-500 md:hidden">
                               Số lượng:
                             </span>
-                            <div className="inline-flex items-center overflow-hidden rounded-lg border border-gray-300">
-                              <button
-                                type="button"
-                                disabled={
-                                  updateMutation.isPending || item.quantity <= 1
-                                }
-                                onClick={() =>
-                                  updateMutation.mutate({
-                                    id: item.id,
-                                    quantity: item.quantity - 1,
-                                  })
-                                }
-                                className="flex h-8 w-8 items-center justify-center text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40">
-                                −
-                              </button>
-                              <span className="min-w-[2.5rem] text-center text-sm font-medium text-gray-900">
-                                {item.quantity}
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="inline-flex items-center overflow-hidden rounded-lg border border-gray-300">
+                                <button
+                                  type="button"
+                                  disabled={
+                                    updateMutation.isPending || item.quantity <= 1
+                                  }
+                                  onClick={() =>
+                                    updateMutation.mutate({
+                                      id: item.id,
+                                      quantity: item.quantity - 1,
+                                    })
+                                  }
+                                  className="flex h-8 w-8 items-center justify-center text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40">
+                                  −
+                                </button>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={item.maxQuantity}
+                                  value={tempQuantities[item.id] !== undefined ? tempQuantities[item.id] : item.quantity}
+                                  onChange={(e) => {
+                                    handleQuantityInputChange(item.id, e.target.value)
+                                  }}
+                                  onBlur={() => {
+                                    handleQuantityBlur(item)
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.target.blur()
+                                    }
+                                  }}
+                                  disabled={updateMutation.isPending}
+                                  className="min-w-10 max-w-14 text-center text-sm font-medium text-gray-900 border-0 focus:outline-none focus:ring-0 disabled:bg-gray-50 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <button
+                                  type="button"
+                                  disabled={
+                                    updateMutation.isPending ||
+                                    item.quantity >= item.maxQuantity
+                                  }
+                                  onClick={() =>
+                                    updateMutation.mutate({
+                                      id: item.id,
+                                      quantity: item.quantity + 1,
+                                    })
+                                  }
+                                  className="flex h-8 w-8 items-center justify-center text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40">
+                                  +
+                                </button>
+                              </div>
+                              <span className="text-[10px] text-gray-400">
+                                Còn {item.maxQuantity} sản phẩm
                               </span>
-                              <button
-                                type="button"
-                                disabled={
-                                  updateMutation.isPending ||
-                                  item.quantity >= item.maxQuantity
-                                }
-                                onClick={() =>
-                                  updateMutation.mutate({
-                                    id: item.id,
-                                    quantity: item.quantity + 1,
-                                  })
-                                }
-                                className="flex h-8 w-8 items-center justify-center text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40">
-                                +
-                              </button>
                             </div>
                           </div>
 
@@ -732,6 +803,15 @@ export default function Cart() {
         onClose={() => setIsVoucherModalOpen(false)}
         onApplyVoucher={handleApplyPlatformVoucher}
         cartSubtotal={selectedSubtotal}
+      />
+
+      {/* Alert Dialog */}
+      <AlertDialog
+        isOpen={alertDialog.isOpen}
+        onClose={() => setAlertDialog({ isOpen: false, title: '', description: '' })}
+        title={alertDialog.title}
+        description={alertDialog.description}
+        confirmText="Đã hiểu"
       />
     </div>
   )

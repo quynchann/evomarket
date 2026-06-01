@@ -12,6 +12,7 @@ module.exports = {
 
     usersData.push(
       {
+        id: 1,
         fullname: 'Admin User',
         email: 'admin@evomarket.com',
         phone_number: '0900000000',
@@ -21,6 +22,7 @@ module.exports = {
         avatar: avatar('Admin User')
       },
       {
+        id: 2,
         fullname: 'Nguyễn Văn A',
         email: 'buyer1@test.com',
         phone_number: '0901234567',
@@ -30,6 +32,7 @@ module.exports = {
         avatar: avatar('Nguyễn Văn A')
       },
       {
+        id: 3,
         fullname: 'Trần Thị B',
         email: 'buyer2@test.com',
         phone_number: '0902345678',
@@ -39,6 +42,7 @@ module.exports = {
         avatar: avatar('Trần Thị B')
       },
       {
+        id: 4,
         fullname: 'Lê Văn C',
         email: 'buyer3@test.com',
         phone_number: '0903456789',
@@ -48,6 +52,7 @@ module.exports = {
         avatar: avatar('Lê Văn C')
       },
       {
+        id: 5,
         fullname: 'Phạm Thị D',
         email: 'seller1@test.com',
         phone_number: '0911111111',
@@ -57,6 +62,7 @@ module.exports = {
         avatar: avatar('Phạm Thị D')
       },
       {
+        id: 6,
         fullname: 'Hoàng Văn E',
         email: 'seller2@test.com',
         phone_number: '0922222222',
@@ -66,6 +72,7 @@ module.exports = {
         avatar: avatar('Hoàng Văn E')
       },
       {
+        id: 7,
         fullname: 'Võ Thị F',
         email: 'seller3@test.com',
         phone_number: '0933333333',

@@ -38,21 +38,11 @@ module.exports = {
         id: 4,
         order_id: 4,
         user_id: 2,
-        amount: 350000,
-        method: 'COD',
-        status: 'Pending',
-        coupons_id: 1,
-        created_at: new Date('2026-03-28')
-      },
-      {
-        id: 5,
-        order_id: 5,
-        user_id: 3,
         amount: 280000,
         method: 'Online',
         status: 'Failed',
-        coupons_id: null,
-        created_at: new Date('2026-03-10')
+        coupons_id: 1,
+        created_at: new Date('2026-03-28')
       }
     ]
 

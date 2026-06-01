@@ -7,7 +7,7 @@ module.exports = {
     const [productRows] = await queryInterface.sequelize.query(`
       SELECT id, seller_id, title, thumbnail, price, import_price 
       FROM Products 
-      WHERE id IN (1, 2, 3, 4, 5, 6, 8)
+      WHERE id IN (1, 2, 3, 4, 6, 8)
     `)
     
     const productMap = {}
@@ -107,25 +107,6 @@ module.exports = {
       { 
         id: 5, 
         order_id: 3, 
-        product_id: 5, 
-        variant_id: 19, 
-        seller_id: productMap[5].seller_id,
-        price: 450000, 
-        quantity: 1, 
-        total_price: 450000,
-        selling_price: 450000,
-        import_price: 360000,
-        platform_fee: Math.round(450000 * platformFeePercent / 100),
-        platform_fee_percent: platformFeePercent,
-        product_title: productMap[5].title,
-        product_thumbnail: productMap[5].thumbnail,
-        variant_name: '45cm'
-      },
-      
-      // Order 4
-      { 
-        id: 6, 
-        order_id: 4, 
         product_id: 3, 
         variant_id: 10, 
         seller_id: productMap[3].seller_id,
@@ -141,10 +122,10 @@ module.exports = {
         variant_name: 'Tròng xanh'
       },
       
-      // Order 5
+      // Order 4
       { 
-        id: 7, 
-        order_id: 5, 
+        id: 6, 
+        order_id: 4, 
         product_id: 4, 
         variant_id: 15, 
         seller_id: productMap[4].seller_id,
