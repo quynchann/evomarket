@@ -29,6 +29,7 @@ import { CustomerLayout } from "./components/customer/layout/CustomerLayout.jsx"
 import Homepage from "./components/customer/Home.jsx";
 import CategoryProducts from "./components/customer/CategoryProducts.jsx";
 import ProductDetail from "./components/customer/ProductDetail.jsx";
+import ARTryOnScreen from "./components/customer/ARTryOnScreen.jsx";
 import ShopProfile from "./components/customer/ShopProfile.jsx";
 import Profile from "./components/customer/Profile.jsx";
 import ChatPage from "./components/customer/ChatPage.jsx";
@@ -49,6 +50,7 @@ import { SellerRegister } from "./components/seller/auth/Register.jsx";
 import { SellerLayout } from "./components/seller/layout/SellerLayout.jsx";
 import Home from "./components/seller/Home.jsx";
 import ProductManagement from "./components/seller/ProductManagement.jsx";
+import ProductForm from "./components/seller/ProductForm.jsx";
 import OrdersManager from "./components/seller/OrdersManager.jsx";
 import SellerChatPage from "./components/seller/ChatPage.jsx";
 import SellerProfile from "./components/seller/SellerProfile.jsx";
@@ -86,6 +88,9 @@ const router = createBrowserRouter([
           { path: "customer/shops/:sellerId", Component: ShopProfile },
         ],
       },
+
+      // AR Try-On screen (without layout for fullscreen experience)
+      { path: "products/:id/try-on", Component: ARTryOnScreen },
 
       // Admin: /admin/* — layout chung; chat chỉ đổi khung, giữ ChatShell
       {
@@ -164,6 +169,8 @@ const router = createBrowserRouter([
             children: [
               { path: "seller/home", Component: Home },
               { path: "seller/products", Component: ProductManagement },
+              { path: "seller/products/new", Component: ProductForm },
+              { path: "seller/products/:id/edit", Component: ProductForm },
               { path: "seller/coupons", Component: SellerCouponManagement },
               { path: "seller/orders", Component: OrdersManager },
               { path: "seller/chat/:conversationId", Component: SellerChatPage },

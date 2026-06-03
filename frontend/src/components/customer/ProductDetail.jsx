@@ -176,9 +176,15 @@ export default function ProductDetail() {
     buyNowMutation.mutate();
   };
 
-  // Handle try on (UI only - chưa implement chức năng)
+  // Handle try on - Navigate to AR try-on screen
   const handleTryOn = () => {
-    // TODO: Implement AR try-on feature
+    if (!product) {
+      toast.error("Không tìm thấy thông tin sản phẩm");
+      return;
+    }
+    navigate(`/products/${id}/try-on`, { 
+      state: { product } 
+    });
   };
 
   if (isLoading) {

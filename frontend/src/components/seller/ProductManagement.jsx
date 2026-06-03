@@ -429,10 +429,9 @@ export default function ProductManager() {
               Quản lý danh mục và sản phẩm của cửa hàng
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => openAddProduct()}
-            className="group relative shrink-0 overflow-hidden rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:scale-105"
+          <Link
+            to="/seller/products/new"
+            className="group relative shrink-0 overflow-hidden rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:scale-105 inline-block"
           >
             <span className="relative z-10 flex items-center gap-2">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,7 +440,7 @@ export default function ProductManager() {
               Thêm sản phẩm
             </span>
             <div className="absolute inset-0 bg-gradient-to-r from-orange-600 to-rose-600 opacity-0 transition-opacity group-hover:opacity-100"></div>
-          </button>
+          </Link>
         </div>
 
         {/* Tabs - Enhanced */}
@@ -954,9 +953,9 @@ export default function ProductManager() {
 
                           <td className="px-2 py-3 sm:px-3 lg:px-6 sm:py-4 align-middle">
                             <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => openEditProduct(product.id)}
-                                className="rounded-lg p-2 hover:bg-slate-100"
+                              <Link
+                                to={`/seller/products/${product.id}/edit`}
+                                className="rounded-lg p-2 hover:bg-slate-100 inline-block"
                                 title="Chỉnh sửa"
                               >
                                 <svg
@@ -972,7 +971,7 @@ export default function ProductManager() {
                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                                   />
                                 </svg>
-                              </button>
+                              </Link>
 
                               <button
                                 onClick={() => removeProduct(product.id)}
@@ -1719,16 +1718,16 @@ export default function ProductManager() {
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                onClick={() => openEditProduct(detailProduct.id)}
-                className="rounded-lg px-4 py-2"
+              <Link
+                to={`/seller/products/${detailProduct.id}/edit`}
+                className="rounded-lg px-4 py-2 text-center"
                 style={{
                   backgroundColor: config.primary_action_color,
                   color: "#fff",
                 }}
               >
                 Chỉnh sửa
-              </button>
+              </Link>
               <button
                 onClick={() => {
                   const productId = detailProduct.id;
