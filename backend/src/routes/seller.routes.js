@@ -1,5 +1,6 @@
 import express from 'express'
 import * as sellerProductController from '../controllers/sellerProduct.controller.js'
+import * as productTryonInstanceController from '../controllers/productTryonInstance.controller.js'
 import * as orderController from '../controllers/order.controller.js'
 import * as couponController from '../controllers/coupon.controller.js'
 import { authorizeRoles } from '@/middlewares/role.middleware.js'
@@ -28,6 +29,15 @@ router.post('/orders/:id/complete-refund', orderController.sellerCompleteRefund)
 // Quản lý sản phẩm
 router.get('/categories', sellerProductController.listCategories)
 router.get('/products', sellerProductController.listProducts)
+router.get(
+  '/products/:id/tryon-instance',
+  productTryonInstanceController.getTryonInstance,
+)
+router.put(
+  '/products/:id/tryon-instance',
+  productTryonInstanceController.saveTryonInstance,
+)
+router.get('/products/:id', sellerProductController.getProduct)
 router.post('/products', sellerProductController.createProduct)
 router.put('/products/:id', sellerProductController.updateProduct)
 router.delete('/products/:id', sellerProductController.deleteProduct)

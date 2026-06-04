@@ -1,4 +1,10 @@
-import { Category, Product, User, sequelize } from '../models/index.js'
+import {
+  Category,
+  Product,
+  ProductTryonInstance,
+  User,
+  sequelize,
+} from '../models/index.js'
 import ApiError from '../utils/api-error.js'
 import { StatusCodes } from 'http-status-codes'
 import { Op, QueryTypes } from 'sequelize'
@@ -20,8 +26,7 @@ const withRatingSummaries = async (dtos) => {
 const toPlain = (row) => (row?.get ? row.get({ plain: true }) : row)
 
 const sellerDisplayName = (seller) => {
-  const sn =
-    seller?.shop_name != null ? String(seller.shop_name).trim() : ''
+  const sn = seller?.shop_name != null ? String(seller.shop_name).trim() : ''
   const fn = seller?.fullname != null ? String(seller.fullname).trim() : ''
   return sn || fn || 'Seller'
 }
@@ -33,12 +38,12 @@ const sellerDisplayName = (seller) => {
 export const mapProductToPublicDto = (row) => {
   const plain = toPlain(row)
   if (!plain) return null
-  
+
   const cat = plain.Category || {}
   const seller = plain.Seller || {}
   const available = Number(plain.available) || 0
   const deleted = Boolean(plain.deleted)
-  
+
   // Parse images
   let images = []
   if (plain.images) {
@@ -62,7 +67,7 @@ export const mapProductToPublicDto = (row) => {
     description: plain.description || '',
     category: {
       id: cat.id,
-      name: cat.name || ''
+      name: cat.name || '',
     },
     seller: {
       id: seller.id,
@@ -73,7 +78,7 @@ export const mapProductToPublicDto = (row) => {
     sold: Number(plain.sold) || 0,
     inStock: available > 0 && !deleted,
     createdAt: plain.created_at,
-    updatedAt: plain.updated_at
+    updatedAt: plain.updated_at,
   }
 }
 
@@ -90,12 +95,12 @@ export const getPublicProducts = async (filters = {}) => {
     sortBy = 'latest', // latest, popular, price_asc, price_desc
     sellerId,
     page = 1,
-    limit = 20
+    limit = 20,
   } = filters
 
   const where = {
     deleted: false,
-    available: { [Op.gt]: 0 } // Chỉ lấy sản phẩm còn hàng
+    available: { [Op.gt]: 0 }, // Chỉ lấy sản phẩm còn hàng
   }
 
   const sid = sellerId != null ? Number(sellerId) : NaN
@@ -114,8 +119,8 @@ export const getPublicProducts = async (filters = {}) => {
       sequelize.where(
         sequelize.fn('LOWER', sequelize.col('title')),
         'LIKE',
-        `%${search.trim().toLowerCase()}%`
-      )
+        `%${search.trim().toLowerCase()}%`,
+      ),
     ]
   }
 
@@ -145,18 +150,18 @@ export const getPublicProducts = async (filters = {}) => {
     include: [
       {
         model: Category,
-        attributes: ['id', 'name']
+        attributes: ['id', 'name'],
       },
       {
         model: User,
         as: 'Seller',
-        attributes: ['id', 'fullname', 'shop_name']
-      }
+        attributes: ['id', 'fullname', 'shop_name'],
+      },
     ],
     order,
     limit: Number(limit),
     offset,
-    distinct: true
+    distinct: true,
   })
 
   return {
@@ -165,8 +170,8 @@ export const getPublicProducts = async (filters = {}) => {
       total: count,
       page: Number(page),
       limit: Number(limit),
-      totalPages: Math.ceil(count / Number(limit))
-    }
+      totalPages: Math.ceil(count / Number(limit)),
+    },
   }
 }
 
@@ -177,32 +182,57 @@ export const getProductById = async (productId) => {
   const product = await Product.findOne({
     where: {
       id: productId,
-      deleted: false
+      deleted: false,
     },
     include: [
       {
         model: Category,
-        attributes: ['id', 'name']
+        attributes: ['id', 'name'],
       },
       {
         model: User,
         as: 'Seller',
-        attributes: ['id', 'fullname', 'email', 'shop_name']
-      }
-    ]
+        attributes: ['id', 'fullname', 'email', 'shop_name'],
+      },
+    ],
   })
 
   if (!product) {
     throw new ApiError(
       StatusCodes.NOT_FOUND,
       'Product not found',
-      'PRODUCT_NOT_FOUND'
+      'PRODUCT_NOT_FOUND',
     )
   }
 
   const dto = mapProductToPublicDto(product)
   const [withRating] = await withRatingSummaries([dto])
-  return withRating
+
+  const tryonRows = await ProductTryonInstance.findAll({
+    where: { product_id: productId },
+    order: [
+      ['anchor_index', 'ASC'],
+      ['id', 'ASC'],
+    ],
+  })
+
+  const tryonInstances = tryonRows
+    .map((row) => {
+      const plain = toPlain(row)
+      return {
+        id: plain.id,
+        model_url: plain.model_url,
+        anchor_index: plain.anchor_index,
+        transform_config: plain.transform_config,
+      }
+    })
+    .filter((row) => row.model_url)
+
+  return {
+    ...withRating,
+    tryonInstances,
+    hasTryOn: tryonInstances.length > 0,
+  }
 }
 
 /**
@@ -218,7 +248,7 @@ export const getProductsByCategory = async (categoryId, filters = {}) => {
 export const getAllCategories = async () => {
   const categories = await Category.findAll({
     attributes: ['id', 'name'],
-    order: [['id', 'ASC']]
+    order: [['id', 'ASC']],
   })
 
   // Count products for each category
@@ -228,15 +258,15 @@ export const getAllCategories = async () => {
         where: {
           category_id: cat.id,
           deleted: false,
-          available: { [Op.gt]: 0 }
-        }
+          available: { [Op.gt]: 0 },
+        },
       })
       return {
         id: cat.id,
         name: cat.name,
-        productCount: count
+        productCount: count,
       }
-    })
+    }),
   )
 
   return categoriesWithCount
@@ -249,21 +279,21 @@ export const getFeaturedProducts = async (limit = 8) => {
   const products = await Product.findAll({
     where: {
       deleted: false,
-      available: { [Op.gt]: 0 }
+      available: { [Op.gt]: 0 },
     },
     include: [
       {
         model: Category,
-        attributes: ['id', 'name']
+        attributes: ['id', 'name'],
       },
       {
         model: User,
         as: 'Seller',
-        attributes: ['id', 'fullname', 'shop_name']
-      }
+        attributes: ['id', 'fullname', 'shop_name'],
+      },
     ],
     order: [['sold', 'DESC']], // Sản phẩm bán chạy nhất
-    limit: Number(limit)
+    limit: Number(limit),
   })
 
   return withRatingSummaries(products.map(mapProductToPublicDto))
@@ -296,10 +326,7 @@ export const recordProductView = async (
     return { recorded: false, reason: 'invalid_seller' }
   }
 
-  if (
-    viewerUserId != null &&
-    Number(viewerUserId) === sellerId
-  ) {
+  if (viewerUserId != null && Number(viewerUserId) === sellerId) {
     return { recorded: false, skipped: 'self' }
   }
 

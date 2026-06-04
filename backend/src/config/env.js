@@ -21,6 +21,12 @@ export const env = {
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
   JWT_REFRESH_EXPIRE: process.env.JWT_REFRESH_EXPIRE || '30d',
 
+  // Cloudinary configuration
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+  CLOUDINARY_ROOT_FOLDER: process.env.CLOUDINARY_ROOT_FOLDER,
+
   // Public base URL của API (không có /api-v1) — dùng cho VNPay Return URL / IPN đăng ký trên cổng
   API_PUBLIC_BASE_URL: (
     process.env.API_PUBLIC_BASE_URL || 'http://localhost:8080'

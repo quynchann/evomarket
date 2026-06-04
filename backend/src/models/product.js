@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       Product.belongsTo(models.User, { as: "Seller", foreignKey: "seller_id" });
       Product.hasMany(models.ProductVariant, { foreignKey: "product_id" });
       Product.hasMany(models.TryonModel, { foreignKey: "product_id" });
+      Product.hasMany(models.ProductTryonInstance, { foreignKey: "product_id" });
       Product.hasOne(models.Inventory, { foreignKey: "product_id" });
       Product.hasMany(models.Discount, { foreignKey: "product_id" });
       Product.hasMany(models.Review, { foreignKey: "product_id" });

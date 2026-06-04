@@ -83,6 +83,14 @@ Table tryon_models {
     type       enum('clothing', 'shoes', 'glasses', 'hats', 'jewelry') 
 }
 
+Table product_tryon_instances {
+    id                int [primary key, increment]
+    product_id        int [not null]
+    model_url         varchar(500) // Link .glb từ Cloud
+    anchor_index      int // MediaPipe landmark, e.g. 168, 127
+    transform_config  json // position, rotation, scale
+}
+
 Table inventory {
     id          int [primary key, increment]
     product_id  int
@@ -312,6 +320,7 @@ Ref: "categories"."id" < "products"."category_id"
 
 Ref: "products"."id" < "reviews"."product_id"
 Ref: "products"."id" < "tryon_models"."product_id"
+Ref: "products"."id" < "product_tryon_instances"."product_id"
 Ref: "products"."id" < "product_variants"."product_id"
 Ref: "products"."id" < "inventory"."product_id"
 Ref: "products"."id" > "discounts"."product_id"

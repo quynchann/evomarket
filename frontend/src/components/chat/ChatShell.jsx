@@ -207,9 +207,7 @@ export default function ChatShell({
   }, [activeOther?.id, onlineUsers])
 
   const typingUserSet = useChatSocketStore((s) =>
-    activeConversationId != null
-      ? s.typingUsers[activeConversationId]
-      : null,
+    activeConversationId != null ? s.typingUsers[activeConversationId] : null,
   )
 
   const peerTyping =
@@ -224,15 +222,11 @@ export default function ChatShell({
     [messages, currentUserId, bubbleMode],
   )
 
-  const bubbleRows = useMemo(
-    () => buildChatBubbleRows(bubbles),
-    [bubbles],
-  )
+  const bubbleRows = useMemo(() => buildChatBubbleRows(bubbles), [bubbles])
 
   useEffect(() => {
     const mq =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(min-width: 768px)')
+      typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)')
     if (mq.matches) return
     if (conversationIdParam) setMobileInboxOpen(false)
   }, [conversationIdParam])
@@ -368,10 +362,9 @@ export default function ChatShell({
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden md:flex-row">
         <aside
-          className={`absolute inset-0 z-10 flex min-h-0 w-full shrink-0 flex-col border-gray-200 bg-white md:static md:z-auto md:inset-auto md:flex md:w-80 md:border-r ${
+          className={`absolute inset-0 z-10 flex min-h-0 w-full shrink-0 flex-col border-gray-200 bg-white md:static md:inset-auto md:z-auto md:flex md:w-80 md:border-r ${
             mobileInboxOpen ? 'flex' : 'hidden md:flex'
-          }`}
-        >
+          }`}>
           <div className="shrink-0 border-b border-gray-200 p-3 sm:p-4">
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
@@ -429,7 +422,7 @@ export default function ChatShell({
                   onClick={() => selectConversation(conv)}
                   className={`relative flex w-full cursor-pointer items-start gap-3 border-b border-gray-100 p-4 transition hover:bg-gray-50 ${
                     activeConversationId === conv.id ? 'bg-orange-50' : ''
-                  } ${openMenuId === conv.id ? 'z-[120]' : 'z-0'}`}>
+                  } ${openMenuId === conv.id ? 'z-120' : 'z-0'}`}>
                   <div className="relative shrink-0">
                     {av ? (
                       <img
@@ -438,8 +431,7 @@ export default function ChatShell({
                         className="h-12 w-12 rounded-full object-cover"
                       />
                     ) : (
-                      <div
-                        className={`h-12 w-12 ${AVATAR_PLACEHOLDER}`}>
+                      <div className={`h-12 w-12 ${AVATAR_PLACEHOLDER}`}>
                         {initial}
                       </div>
                     )}
@@ -469,7 +461,7 @@ export default function ChatShell({
                         <span className="text-xs text-gray-400">
                           {formatSidebarTime(conv.last_message_at)}
                         </span>
-                        <div className="relative z-[130]">
+                        <div className="relative z-130">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -479,19 +471,19 @@ export default function ChatShell({
                               )
                             }}
                             onKeyDown={(e) => e.stopPropagation()}
-                            className="relative z-[130] flex h-5 w-5 items-center justify-center rounded hover:bg-gray-200">
+                            className="relative z-130 flex h-5 w-5 items-center justify-center rounded hover:bg-gray-200">
                             <MoreHorizontal className="h-4 w-4 text-gray-500" />
                           </button>
 
                           {openMenuId === conv.id && (
                             <>
                               <div
-                                className="fixed inset-0 z-[125]"
+                                className="fixed inset-0 z-125"
                                 role="presentation"
                                 onClick={() => setOpenMenuId(null)}
                               />
                               <div
-                                className="absolute top-full right-0 z-[140] mt-1 w-48 rounded-md border border-gray-200 bg-white py-1 shadow-xl"
+                                className="absolute top-full right-0 z-140 mt-1 w-48 rounded-md border border-gray-200 bg-white py-1 shadow-xl"
                                 onClick={(e) => e.stopPropagation()}
                                 role="presentation">
                                 <button
@@ -533,15 +525,13 @@ export default function ChatShell({
         <div
           className={`relative flex min-h-0 min-w-0 flex-1 flex-col bg-gray-50 ${
             mobileInboxOpen ? 'hidden md:flex' : 'flex'
-          }`}
-        >
+          }`}>
           <header className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-2.5 md:justify-start md:px-6 md:py-3">
             <button
               type="button"
               aria-label="Danh sách hộp thư"
               className="mr-2 flex shrink-0 items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100 md:hidden"
-              onClick={() => setMobileInboxOpen(true)}
-            >
+              onClick={() => setMobileInboxOpen(true)}>
               <ChevronLeft className="h-5 w-5" aria-hidden />
             </button>
             <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -559,9 +549,7 @@ export default function ChatShell({
                 )}
                 {activeConversationId != null && activeOther?.id != null && (
                   <span
-                    title={
-                      activePeerOnline ? 'Trực tuyến' : 'Ngoại tuyến'
-                    }
+                    title={activePeerOnline ? 'Trực tuyến' : 'Ngoại tuyến'}
                     className={`absolute right-0 bottom-0 h-3 w-3 rounded-full border-2 border-white ${
                       activePeerOnline ? 'bg-emerald-500' : 'bg-gray-300'
                     }`}
@@ -582,17 +570,13 @@ export default function ChatShell({
                   ) : peerTyping ? (
                     <>
                       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
-                      <span className="italic text-gray-600">
-                        Đang nhập…
-                      </span>
+                      <span className="text-gray-600 italic">Đang nhập…</span>
                     </>
                   ) : (
                     <>
                       <span
                         className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                          activePeerOnline
-                            ? 'bg-emerald-500'
-                            : 'bg-gray-400'
+                          activePeerOnline ? 'bg-emerald-500' : 'bg-gray-400'
                         }`}
                       />
                       <span
@@ -601,9 +585,7 @@ export default function ChatShell({
                             ? 'text-emerald-700'
                             : 'text-gray-500'
                         }>
-                        {activePeerOnline
-                          ? 'Trực tuyến'
-                          : 'Ngoại tuyến'}
+                        {activePeerOnline ? 'Trực tuyến' : 'Ngoại tuyến'}
                       </span>
                     </>
                   )}
@@ -619,9 +601,15 @@ export default function ChatShell({
               scrollbarWidth: 'thin',
               scrollbarColor: 'rgba(0,0,0,0.2) transparent',
             }}>
-            <div ref={topSentinelRef} className="h-1 w-full shrink-0" aria-hidden />
+            <div
+              ref={topSentinelRef}
+              className="h-1 w-full shrink-0"
+              aria-hidden
+            />
             {messagesError && (
-              <p className="text-center text-sm text-red-600">{messagesError}</p>
+              <p className="text-center text-sm text-red-600">
+                {messagesError}
+              </p>
             )}
             {loadingOlder && (
               <p className="text-center text-xs text-gray-400">
@@ -677,13 +665,17 @@ export default function ChatShell({
                               src={row.bubble.mediaUrl}
                               alt="Chat image"
                               className="max-h-60 max-w-full cursor-pointer object-contain"
-                              onClick={() => window.open(row.bubble.mediaUrl, '_blank')}
+                              onClick={() =>
+                                window.open(row.bubble.mediaUrl, '_blank')
+                              }
                             />
-                            {row.bubble.text && row.bubble.text !== '[Hình ảnh]' && (
-                              <div className={`mt-1 px-1.5 text-sm ${mine ? 'text-white' : 'text-gray-800'}`}>
-                                {row.bubble.text}
-                              </div>
-                            )}
+                            {row.bubble.text &&
+                              row.bubble.text !== '[Hình ảnh]' && (
+                                <div
+                                  className={`mt-1 px-1.5 text-sm ${mine ? 'text-white' : 'text-gray-800'}`}>
+                                  {row.bubble.text}
+                                </div>
+                              )}
                           </div>
                         )}
                         <div
@@ -760,7 +752,10 @@ export default function ChatShell({
               <button
                 type="button"
                 onClick={handleSendMessage}
-                disabled={activeConversationId == null || (!input.trim() && selectedImages.length === 0)}
+                disabled={
+                  activeConversationId == null ||
+                  (!input.trim() && selectedImages.length === 0)
+                }
                 className="flex h-9 w-9 items-center justify-center rounded-md bg-orange-500 text-white transition hover:bg-orange-600 disabled:opacity-50">
                 <Send className="h-4 w-4" />
               </button>

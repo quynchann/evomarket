@@ -18,26 +18,28 @@ export const socketAuthMiddleware = async (socket, next) => {
     const token = socket.handshake.auth.token
 
     if (!token) {
-      return next(new Error('Authentication token required'))
+      return next(
+        new Error('[Socket Auth] Auth error: Missing authentication token'),
+      )
     }
 
     // Verify JWT token
     const payload = jwt.verify(token, process.env.JWT_SECRET)
 
     if (!payload || !payload.sub) {
-      return next(new Error('Invalid token payload'))
+      return next(new Error('[Socket Auth] Auth error: Invalid token payload'))
     }
 
     // Lấy thông tin user từ database
     const user = await findByIdWithoutPassword(payload.sub)
 
     if (!user) {
-      return next(new Error('User not found'))
+      return next(new Error('[Socket Auth] Auth error: User not found'))
     }
 
     // Kiểm tra user có bị khóa/vô hiệu hóa không
-    if (user.status === 'inactive' || user.status === 'banned') {
-      return next(new Error('User account is not active'))
+    if (user.account_status === 'LOCKED') {
+      return next(new Error('[Socket Auth] Auth error: User account is locked'))
     }
 
     // Attach user info vào socket
@@ -45,8 +47,6 @@ export const socketAuthMiddleware = async (socket, next) => {
     console.log(`[Socket Auth] User authenticated: ${user.id} (${user.role})`)
     next()
   } catch (error) {
-    console.error('[Socket Auth] Authentication failed:', error.message)
-
     // Handle JWT errors
     if (error.name === 'JsonWebTokenError') {
       return next(new Error('Invalid token'))

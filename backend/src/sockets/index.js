@@ -15,10 +15,10 @@ const io = new Server(server, {
   cors: {
     origin: env.BASE_URL_FRONTEND,
     credentials: true,
-    methods: ['GET', 'POST']
+    methods: ['GET', 'POST'],
   },
   pingTimeout: 60000,
-  connectTimeout: 20000
+  connectTimeout: 20000,
 })
 
 // ============================================
@@ -42,20 +42,5 @@ chatNamespace.use(socketAuthMiddleware)
 
 // Setup handlers
 setupChatNamespace(chatNamespace)
-
-// ============================================
-// Default namespace (không nên dùng)
-// ============================================
-io.on('connection', (socket) => {
-  console.warn(
-    `[Warning] Client connected to default namespace. Use /system or /chat instead. Socket ID: ${socket.id}`
-  )
-
-  socket.emit('error', {
-    message: 'Please connect to /system or /chat namespace'
-  })
-
-  socket.disconnect(true)
-})
 
 export { io, app, server }
