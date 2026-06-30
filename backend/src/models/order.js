@@ -11,8 +11,6 @@ module.exports = (sequelize, DataTypes) => {
       Order.hasMany(models.OrderItem, { foreignKey: "order_id" });
       Order.hasOne(models.Payment, { foreignKey: "order_id" });
       Order.hasMany(models.Refund, { foreignKey: "order_id" });
-      Order.hasOne(models.RevenueSettlement, { foreignKey: "order_id" });
-      Order.hasOne(models.Shipment, { foreignKey: "order_id" });
       Order.hasMany(models.OrderStatusHistory, {
         foreignKey: "order_id",
         as: "OrderStatusHistories",

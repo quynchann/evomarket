@@ -4,14 +4,11 @@ module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     static associate(models) {
       User.hasMany(models.UserAddress, { foreignKey: "user_id" });
-      User.hasMany(models.UserPayment, { foreignKey: "user_id" });
       User.hasMany(models.Order, { foreignKey: "user_id" });
       User.hasMany(models.Cart, { foreignKey: "user_id" });
       User.hasMany(models.Refund, { foreignKey: "user_id" });
       User.hasMany(models.Payment, { foreignKey: "user_id" });
       User.hasMany(models.Review, { foreignKey: "user_id" });
-      User.hasMany(models.Withdrawal, { foreignKey: "seller_id" });
-      User.hasMany(models.RevenueSettlement, { foreignKey: "seller_id" });
       
       // Chat relationships
       User.hasMany(models.Conversation, { as: "ConversationsAsUser1", foreignKey: "user1_id" });

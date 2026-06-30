@@ -18,6 +18,10 @@ import apiService from '../../services/api.js'
 import { useAuthStore } from '../../stores/useAuthStore.js'
 import TryonModelPreview from './tryon/TryonModelPreview.jsx'
 import {
+  releaseActiveCameraStreams,
+  stopMindarScene,
+} from './tryon/useMindarSceneHost.js'
+import {
   DEFAULT_TRYON_CONFIG,
   TRYON_TYPE_META,
   arSettingsToTryonConfig,
@@ -35,6 +39,22 @@ export default function ProductForm() {
   const accessToken = useAuthStore((s) => s.accessToken)
   const fileInputRef = useRef(null)
   const modelFileInputRef = useRef(null)
+
+  const cleanupCamera = () => {
+    stopMindarScene(null)
+    releaseActiveCameraStreams()
+  }
+
+  useEffect(() => {
+    return () => {
+      cleanupCamera()
+    }
+  }, [])
+
+  const handleLeavePage = () => {
+    cleanupCamera()
+    navigate('/seller/products')
+  }
 
   // Form state
   const [productName, setProductName] = useState('')
@@ -232,6 +252,7 @@ export default function ProductForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['seller', 'products'] })
       toast.success(id ? 'Đã cập nhật sản phẩm' : 'Đã thêm sản phẩm mới')
+      cleanupCamera()
       navigate('/seller/products')
     },
     onError: (err) => {
@@ -314,7 +335,7 @@ export default function ProductForm() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate('/seller/products')}
+                onClick={handleLeavePage}
                 className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-orange-600 transition-all hover:scale-105 hover:shadow-md">
                 <ArrowLeft className="h-5 w-5" />
               </button>

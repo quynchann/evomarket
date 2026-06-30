@@ -6,6 +6,7 @@ import Footer from './Footer'
 import bannerSummer from '../../assets/banner-summer-clean.png'
 import bannerJewelry from '../../assets/banner-jewelry-elegant.png'
 import bannerHats from '../../assets/banner-hats.png'
+import { categoryImages } from '../../constants/productImages.js'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -23,15 +24,22 @@ export default function HomePage() {
     queryFn: () => productApi.getFeaturedProducts(16),
   })
 
-  // Fetch all products from API
+  // Fetch new arrivals from API
   const { data: productsData, isLoading: isProductsLoading } = useQuery({
     queryKey: ['products'],
-    queryFn: () => productApi.getProducts({ limit: 16 }),
+    queryFn: () => productApi.getProducts({ limit: 16, sortBy: 'latest' }),
+  })
+
+  // Fetch UCB-recommended products
+  const { data: recommendedData, isLoading: isRecommendedLoading } = useQuery({
+    queryKey: ['recommended-products'],
+    queryFn: () => productApi.getProducts({ limit: 16, sortBy: 'ucb' }),
   })
 
   const categories = categoriesData?.data || []
   const featuredProducts = featuredData?.data || []
   const products = productsData?.data || []
+  const recommendedProducts = recommendedData?.data || []
 
   // Format price helper
   const formatPrice = (price) => {
@@ -64,7 +72,7 @@ export default function HomePage() {
     {
       title: 'ELEGANT JEWELRY',
       heading: 'Hoa tai tinh tế nổi bật',
-      subtitle: 'Trang sức cao cấp – Tôn vinh vẻ đẹp',
+      subtitle: 'Hoa tai cao cấp – Tôn vinh vẻ đẹp',
       discount: '20%',
       image: bannerJewelry,
     },
@@ -222,22 +230,19 @@ export default function HomePage() {
                 {
                   name: 'Mũ',
                   desc: 'Phong cách đa dạng, bảo vệ tối ưu',
-                  image:
-                    'https://images.unsplash.com/photo-1521369909029-2afed882baee?w=400&h=300&fit=crop&q=80',
+                  image: categoryImages.hat,
                   id: categories.find((c) => c.name === 'Mũ')?.id,
                 },
                 {
                   name: 'Kính',
                   desc: 'Thời trang sành điệu, bảo vệ mắt',
-                  image:
-                    'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=300&fit=crop&q=80',
+                  image: categoryImages.glasses,
                   id: categories.find((c) => c.name === 'Kính')?.id,
                 },
                 {
                   name: 'Hoa tai',
                   desc: 'Tinh tế, nữ tính và nổi bật',
-                  image:
-                    'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=400&h=300&fit=crop&q=80',
+                  image: categoryImages.earring,
                   id: categories.find((c) => c.name === 'Hoa tai')?.id,
                 },
               ].map((cat, idx) => (
@@ -294,7 +299,7 @@ export default function HomePage() {
                 Sản phẩm nổi bật
               </h3>
               <button
-                onClick={() => navigate('/customer/products')}
+                onClick={() => navigate('/customer/products?sort=featured')}
                 className="flex items-center gap-1 text-sm font-medium text-orange-500 transition hover:text-orange-600">
                 Xem tất cả
                 <svg
@@ -381,7 +386,7 @@ export default function HomePage() {
                 Sản phẩm mới về
               </h3>
               <button
-                onClick={() => navigate('/customer/products')}
+                onClick={() => navigate('/customer/products?sort=new')}
                 className="flex items-center gap-1 text-sm font-medium text-orange-500 transition hover:text-orange-600">
                 Xem tất cả
                 <svg
@@ -444,6 +449,79 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="rounded-xl bg-white py-12 text-center text-gray-500">
+                Không có sản phẩm nào
+              </div>
+            )}
+          </section>
+
+          {/* UCB Recommendations */}
+          <section id="goi-y" className="py-8">
+            <div className="mb-6 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-800">Gợi ý hôm nay</h3>
+              <button
+                onClick={() => navigate('/customer/products')}
+                className="flex items-center gap-1 text-sm font-medium text-orange-500 transition hover:text-orange-600">
+                Xem tất cả
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
+            {isRecommendedLoading ? (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="animate-pulse rounded-lg bg-gray-100">
+                    <div className="h-40 w-full rounded-t-lg bg-gray-200"></div>
+                    <div className="p-3">
+                      <div className="mb-2 h-3 rounded bg-gray-200"></div>
+                      <div className="h-4 w-2/3 rounded bg-gray-200"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : recommendedProducts.length > 0 ? (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {recommendedProducts.slice(0, 4).map((p) => (
+                  <div
+                    key={p.id}
+                    className="group cursor-pointer overflow-hidden rounded-lg bg-white shadow-sm transition-all hover:shadow-md"
+                    onClick={() => navigate(`/customer/products/${p.id}`)}>
+                    <div className="relative">
+                      <img
+                        src={p.thumbnail || 'https://via.placeholder.com/300'}
+                        alt={p.title}
+                        className="h-40 w-full object-cover"
+                        onError={(e) => {
+                          e.target.src =
+                            'https://via.placeholder.com/300?text=No+Image'
+                        }}
+                      />
+                      <div className="absolute top-2 left-2 rounded bg-teal-500 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                        GỢI Ý
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <p className="mb-2 line-clamp-2 h-10 text-sm text-gray-800">
+                        {p.title}
+                      </p>
+                      <p className="text-base font-bold text-orange-600">
+                        {formatPrice(p.price)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl bg-gray-50 py-12 text-center text-gray-500">
                 Không có sản phẩm nào
               </div>
             )}

@@ -11,6 +11,11 @@ import { Op, QueryTypes } from 'sequelize'
 import { getSellerTodayStats } from './order.service.js'
 import { emitSellerTodayStats } from '../sockets/emitters/system.emitter.js'
 import { getProductRatingBatch } from './review.service.js'
+import {
+  DEFAULT_POOL_SIZE,
+  rankProductsByUcb,
+  recordClickForProduct,
+} from './ucbRanking.service.js'
 
 const emptyRatingSummary = () => ({ average: null, count: 0 })
 
@@ -92,7 +97,7 @@ export const getPublicProducts = async (filters = {}) => {
     search,
     minPrice,
     maxPrice,
-    sortBy = 'latest', // latest, popular, price_asc, price_desc
+    sortBy = 'latest', // latest, popular, price_asc, price_desc, ucb
     sellerId,
     page = 1,
     limit = 20,
@@ -132,7 +137,47 @@ export const getPublicProducts = async (filters = {}) => {
     where.price = { ...where.price, [Op.lte]: Number(maxPrice) }
   }
 
-  // Sorting
+  const include = [
+    {
+      model: Category,
+      attributes: ['id', 'name'],
+    },
+    {
+      model: User,
+      as: 'Seller',
+      attributes: ['id', 'fullname', 'shop_name'],
+    },
+  ]
+
+  // UCB: lấy pool ứng viên, xếp hạng, phân trang trong bộ nhớ
+  if (sortBy === 'ucb') {
+    const poolLimit = Math.max(DEFAULT_POOL_SIZE, Number(limit) * Number(page))
+    const { count, rows: poolRows } = await Product.findAndCountAll({
+      where,
+      include,
+      order: [['id', 'DESC']],
+      limit: poolLimit,
+      distinct: true,
+    })
+
+    const ranked = await rankProductsByUcb(poolRows, { recordImpressions: false })
+    const offset = (Number(page) - 1) * Number(limit)
+    const pageRows = ranked.slice(offset, offset + Number(limit))
+
+    await rankProductsByUcb(pageRows, { recordImpressions: true })
+
+    return {
+      products: await withRatingSummaries(pageRows.map(mapProductToPublicDto)),
+      pagination: {
+        total: count,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(count / Number(limit)),
+      },
+    }
+  }
+
+  // Sorting cổ điển
   let order = [['id', 'DESC']] // Default: latest
   if (sortBy === 'popular') {
     order = [['sold', 'DESC']]
@@ -142,22 +187,11 @@ export const getPublicProducts = async (filters = {}) => {
     order = [['price', 'DESC']]
   }
 
-  // Pagination
   const offset = (Number(page) - 1) * Number(limit)
 
   const { count, rows } = await Product.findAndCountAll({
     where,
-    include: [
-      {
-        model: Category,
-        attributes: ['id', 'name'],
-      },
-      {
-        model: User,
-        as: 'Seller',
-        attributes: ['id', 'fullname', 'shop_name'],
-      },
-    ],
+    include,
     order,
     limit: Number(limit),
     offset,
@@ -273,10 +307,10 @@ export const getAllCategories = async () => {
 }
 
 /**
- * Get featured/popular products
+ * Get featured/popular products (sắp xếp theo sold giảm dần)
  */
 export const getFeaturedProducts = async (limit = 8) => {
-  const products = await Product.findAll({
+  const rows = await Product.findAll({
     where: {
       deleted: false,
       available: { [Op.gt]: 0 },
@@ -292,11 +326,14 @@ export const getFeaturedProducts = async (limit = 8) => {
         attributes: ['id', 'fullname', 'shop_name'],
       },
     ],
-    order: [['sold', 'DESC']], // Sản phẩm bán chạy nhất
+    order: [
+      ['sold', 'DESC'],
+      ['id', 'DESC'],
+    ],
     limit: Number(limit),
   })
 
-  return withRatingSummaries(products.map(mapProductToPublicDto))
+  return withRatingSummaries(rows.map(mapProductToPublicDto))
 }
 
 /**
@@ -358,6 +395,12 @@ export const recordProductView = async (
     } catch (e) {
       console.error('[recordProductView] push stats:', e?.message || e)
     }
+  }
+
+  try {
+    await recordClickForProduct(pid)
+  } catch (e) {
+    console.error('[recordProductView] ucb reward:', e?.message || e)
   }
 
   return { recorded: true, newUniqueToday: inserted }

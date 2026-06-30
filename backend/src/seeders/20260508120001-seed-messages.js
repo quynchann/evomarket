@@ -51,7 +51,7 @@ module.exports = {
           conversation_id: 2,
           sender_id: 3,
           content:
-            'Xin chào shop, em muốn hỏi sản phẩm này có size M không ạ?',
+            'Xin chào shop, em muốn hỏi mũ lưỡi trai này còn màu navy không ạ?',
           is_read: false,
           created_at: t3
         },
@@ -59,14 +59,14 @@ module.exports = {
           conversation_id: 2,
           sender_id: 6,
           content:
-            'Chào bạn! Shop có size M đầy đủ nhé. Bạn có thể xem bảng size chi tiết ở phần mô tả sản phẩm để chọn size phù hợp.',
+            'Chào bạn! Shop còn màu navy freesize nhé. Bạn chọn màu ở phần biến thể sản phẩm khi đặt hàng.',
           is_read: false,
           created_at: new Date('2026-03-29 15:25:00')
         },
         {
           conversation_id: 2,
           sender_id: 3,
-          content: 'Shop có hỗ trợ đổi size nếu không vừa không ạ?',
+          content: 'Shop có hỗ trợ đổi màu nếu không vừa ý không ạ?',
           is_read: false,
           created_at: new Date('2026-03-29 15:30:00')
         },
@@ -74,7 +74,7 @@ module.exports = {
           conversation_id: 2,
           sender_id: 6,
           content:
-            'Dạ có ạ, shop hỗ trợ đổi size miễn phí trong vòng 7 ngày kể từ khi nhận hàng. Sản phẩm cần còn nguyên tem mác nhé!',
+            'Dạ có ạ, shop hỗ trợ đổi màu miễn phí trong vòng 7 ngày kể từ khi nhận hàng. Sản phẩm cần còn nguyên tem mác nhé!',
           is_read: false,
           created_at: new Date('2026-03-29 15:35:00')
         },

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import * as productApi from "../../services/productApi";
 import Footer from "./Footer";
+import ProductPagination from "./ProductPagination";
 
 const PAGE_SIZE = 12;
 
@@ -142,31 +143,12 @@ export default function CategoryProducts() {
                 ))}
               </div>
 
-              {totalPages > 1 && (
-                <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-                  <button
-                    type="button"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    className="rounded-xl border-2 border-gray-200 bg-white px-5 py-2 text-sm font-semibold text-gray-700 shadow-sm transition enabled:hover:border-orange-300 enabled:hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Trang trước
-                  </button>
-                  <span className="text-sm font-medium text-gray-600">
-                    Trang {page} / {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={page >= totalPages}
-                    onClick={() =>
-                      setPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    className="rounded-xl border-2 border-gray-200 bg-white px-5 py-2 text-sm font-semibold text-gray-700 shadow-sm transition enabled:hover:border-orange-300 enabled:hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Trang sau
-                  </button>
-                </div>
-              )}
+              <ProductPagination
+                className="mt-10"
+                page={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+              />
             </>
           )}
         </div>

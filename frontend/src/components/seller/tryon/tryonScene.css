@@ -16,16 +16,23 @@
   height: auto;
 }
 
-/* Customer: phủ toàn màn (laptop 16:9 = container 16:9, không letterbox) */
-.tryon-scene-host--fullscreen {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100dvh;
-  min-height: 100dvh;
+/* Customer try-on: 16:9 — khớp webcam laptop (~900×506) */
+.tryon-scene-host--webcam {
+  position: relative;
+  --tryon-height: min(calc(100dvh - 240px), 58vh, 506px);
+  width: min(94vw, 900px, calc(var(--tryon-height) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  max-height: var(--tryon-height);
+  height: auto;
+  margin: 0 auto;
+  flex-shrink: 0;
   touch-action: none;
-  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #111;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .tryon-scene-host a-scene {

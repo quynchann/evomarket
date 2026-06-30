@@ -138,7 +138,6 @@ export const createProduct = async (sellerId, body) => {
 
   const priceNum = Math.max(0, parseInt(price, 10) || 0)
   const importPriceNum = Math.max(0, parseInt(importPrice, 10) || 0)
-  const profitMargin = priceNum - importPriceNum
   let stock = Math.max(0, parseInt(totalStock, 10) || 0)
   let available = stock
   if (status === 'out-of-stock') available = 0
@@ -152,8 +151,6 @@ export const createProduct = async (sellerId, body) => {
     title: String(title || '').trim(),
     price: priceNum,
     import_price: importPriceNum,
-    profit_margin: profitMargin,
-    quantity: String(stock),
     thumbnail: thumb,
     images: imagesJson,
     description: description != null ? String(description) : '',
@@ -207,7 +204,6 @@ export const updateProduct = async (sellerId, productId, body) => {
 
     if (body.price != null) updates.price = priceNum
     if (body.importPrice != null) updates.import_price = importPriceNum
-    updates.profit_margin = priceNum - importPriceNum
   }
   if (body.description != null) updates.description = String(body.description)
   if (body.thumbnail !== undefined || body.images !== undefined) {
@@ -225,7 +221,6 @@ export const updateProduct = async (sellerId, productId, body) => {
     updates.total_stock = stock
     const sold = Number(plain.sold) || 0
     updates.available = Math.max(0, stock - sold)
-    updates.quantity = String(stock)
   }
   if (body.status === 'out-of-stock') {
     updates.available = 0

@@ -28,6 +28,7 @@ import { CustomerRegister } from './components/customer/auth/Register.jsx'
 import { CustomerLayout } from './components/customer/layout/CustomerLayout.jsx'
 import Homepage from './components/customer/Home.jsx'
 import CategoryProducts from './components/customer/CategoryProducts.jsx'
+import AllProducts from './components/customer/AllProducts.jsx'
 import ProductDetail from './components/customer/ProductDetail.jsx'
 import ARTryOnScreen from './components/customer/ARTryOnScreen.jsx'
 import ShopProfile from './components/customer/ShopProfile.jsx'
@@ -68,6 +69,7 @@ const customerPublicRoutes = {
   children: [
     { path: 'homepage', Component: Homepage },
     { path: 'search', Component: SearchProducts },
+    { path: 'products', Component: AllProducts },
     { path: 'categories/:categoryId', Component: CategoryProducts },
     { path: 'products/:id', Component: ProductDetail },
     { path: 'shops/:sellerId', Component: ShopProfile },

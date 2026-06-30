@@ -7,7 +7,7 @@ import { cartApi, syncCartQueryAfterMutation } from '../../services/cartApi'
 import * as productApi from '../../services/productApi'
 import FaceTryonScene from '../tryon/FaceTryonScene.jsx'
 import { buildTryonSceneItems } from '../seller/tryon/tryonConfig.js'
-import { stopMindarScene } from '../seller/tryon/useMindarSceneHost.js'
+import { stopMindarScene, releaseActiveCameraStreams } from '../seller/tryon/useMindarSceneHost.js'
 
 export default function ARTryOnScreen() {
   const { id } = useParams()
@@ -15,10 +15,17 @@ export default function ARTryOnScreen() {
   const location = useLocation()
   const queryClient = useQueryClient()
   const screenRef = useRef(null)
+  const tryonHostRef = useRef(null)
+
+  const cleanupCamera = () => {
+    stopMindarScene(tryonHostRef.current)
+    stopMindarScene(screenRef.current)
+    releaseActiveCameraStreams()
+  }
 
   useEffect(() => {
     return () => {
-      stopMindarScene(screenRef.current)
+      cleanupCamera()
     }
   }, [])
 
@@ -47,7 +54,10 @@ export default function ARTryOnScreen() {
     },
   })
 
-  const handleBack = () => navigate(-1)
+  const handleBack = () => {
+    cleanupCamera()
+    navigate(-1)
+  }
 
   const handleAddToCart = () => {
     if (!product) {
@@ -106,23 +116,21 @@ export default function ARTryOnScreen() {
   return (
     <div
       ref={screenRef}
-      className="relative h-dvh w-full overflow-hidden bg-black">
-      <FaceTryonScene items={tryonItems} fullscreen />
-
-      <div className="pointer-events-none absolute top-0 right-0 left-0 z-20 bg-linear-to-b from-black/70 to-transparent p-4">
-        <div className="pointer-events-auto flex items-center justify-between">
+      className="flex h-dvh w-full flex-col overflow-hidden bg-gray-950">
+      <div className="z-20 shrink-0 bg-linear-to-b from-black/80 to-transparent px-4 pt-4 pb-2">
+        <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={handleBack}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-black/70">
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm hover:bg-white/20">
             <ArrowLeft className="h-6 w-6" />
           </button>
 
           <div className="flex-1 px-4 text-center">
-            <p className="mb-1 text-xs text-white/80">
+            <p className="mb-1 text-xs text-white/70">
               Thử đồ ảo — di chuyển mặt để xem các góc
             </p>
-            <h1 className="text-lg font-bold text-white drop-shadow-lg">
+            <h1 className="truncate text-base font-bold text-white sm:text-lg">
               {product.title}
             </h1>
           </div>
@@ -131,16 +139,20 @@ export default function ARTryOnScreen() {
         </div>
       </div>
 
-      <div className="pointer-events-none absolute top-1/2 left-1/2 z-10 h-[60%] w-[70%] max-w-md -translate-x-1/2 -translate-y-1/2">
-        <div className="relative h-full w-full">
-          <div className="absolute top-0 left-0 h-16 w-16 border-t-2 border-l-2 border-white/40" />
-          <div className="absolute top-0 right-0 h-16 w-16 border-t-2 border-r-2 border-white/40" />
-          <div className="absolute bottom-0 left-0 h-16 w-16 border-b-2 border-l-2 border-white/40" />
-          <div className="absolute right-0 bottom-0 h-16 w-16 border-r-2 border-b-2 border-white/40" />
+      <div className="relative flex min-h-0 flex-1 items-center justify-center px-4 py-3">
+        <div className="relative w-full max-w-[900px]">
+          <FaceTryonScene ref={tryonHostRef} items={tryonItems} webcam />
+
+          <div className="pointer-events-none absolute inset-0 z-10 rounded-xl">
+            <div className="absolute top-4 left-4 h-8 w-8 border-t border-l border-white/40" />
+            <div className="absolute top-4 right-4 h-8 w-8 border-t border-r border-white/40" />
+            <div className="absolute bottom-4 left-4 h-8 w-8 border-b border-l border-white/40" />
+            <div className="absolute right-4 bottom-4 h-8 w-8 border-r border-b border-white/40" />
+          </div>
         </div>
       </div>
 
-      <div className="pointer-events-none absolute right-0 bottom-0 left-0 z-20 bg-linear-to-t from-black/80 via-black/30 to-transparent p-4 pb-8">
+      <div className="z-20 shrink-0 bg-linear-to-t from-black/80 via-black/40 to-transparent p-4 pb-6">
         <div className="pointer-events-auto mx-auto flex max-w-4xl items-center gap-4">
           <div className="flex flex-1 items-center gap-4 rounded-2xl border border-white/10 bg-black/40 p-4 backdrop-blur-md">
             <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-800">

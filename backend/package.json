@@ -12,13 +12,16 @@
     "dev": "nodemon --exec ./node_modules/.bin/babel-node ./src/server.js",
     "postinstall": "patch-package",
     "db:reset": "npx sequelize-cli db:drop && npx sequelize-cli db:create && npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all",
-    "seed": "npx sequelize-cli db:seed:all"
+    "seed": "npx sequelize-cli db:seed:all",
+    "db:diagrams": "node scripts/export-db-diagrams.mjs",
+    "db:erd": "node scripts/export-entity-erd.mjs"
   },
   "author": "quynhle",
   "license": "ISC",
   "dependencies": {
     "@babel/runtime": "^7.28.4",
     "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.10.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -38,6 +41,9 @@
     "@babel/node": "^7.28.0",
     "@babel/plugin-transform-runtime": "^7.28.5",
     "@babel/preset-env": "^7.28.5",
+    "@resvg/resvg-js": "^2.6.2",
+    "@softwaretechnik/dbml-renderer": "^1.0.31",
+    "@viz-js/viz": "^3.28.0",
     "babel-plugin-module-resolver": "^5.0.3",
     "nodemon": "^3.1.11",
     "patch-package": "^8.0.1",

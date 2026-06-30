@@ -1,68 +1,75 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import * as productApi from "../../services/productApi";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import * as productApi from '../../services/productApi'
+import { Search, SlidersHorizontal, X } from 'lucide-react'
 
 export default function SearchProducts() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const queryParam = searchParams.get("q") || "";
-  
-  const [searchInput, setSearchInput] = useState(queryParam);
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const queryParam = searchParams.get('q') || ''
+
+  const [searchInput, setSearchInput] = useState(queryParam)
   const [filters, setFilters] = useState({
-    sortBy: "newest",
-    minPrice: "",
-    maxPrice: "",
-  });
-  const [showFilters, setShowFilters] = useState(false);
+    sortBy: 'ucb',
+    minPrice: '',
+    maxPrice: '',
+  })
+  const [showFilters, setShowFilters] = useState(false)
 
   // Fetch search results
   const { data: searchData, isLoading } = useQuery({
-    queryKey: ["search-products", queryParam, filters.sortBy, filters.minPrice, filters.maxPrice],
-    queryFn: () => productApi.searchProducts(queryParam, {
-      sortBy: filters.sortBy,
-      minPrice: filters.minPrice || undefined,
-      maxPrice: filters.maxPrice || undefined,
-      limit: 50,
-    }),
+    queryKey: [
+      'search-products',
+      queryParam,
+      filters.sortBy,
+      filters.minPrice,
+      filters.maxPrice,
+    ],
+    queryFn: () =>
+      productApi.searchProducts(queryParam, {
+        sortBy: filters.sortBy,
+        minPrice: filters.minPrice || undefined,
+        maxPrice: filters.maxPrice || undefined,
+        limit: 50,
+      }),
     enabled: !!queryParam,
-  });
+  })
 
-  const products = searchData?.data || [];
+  const products = searchData?.data || []
 
   // Update search input when URL changes
   useEffect(() => {
-    setSearchInput(queryParam);
-  }, [queryParam]);
+    setSearchInput(queryParam)
+  }, [queryParam])
 
   const handleSearch = (e) => {
-    e.preventDefault();
+    e.preventDefault()
     if (searchInput.trim()) {
-      navigate(`/customer/search?q=${encodeURIComponent(searchInput.trim())}`);
+      navigate(`/customer/search?q=${encodeURIComponent(searchInput.trim())}`)
     }
-  };
+  }
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(price);
-  };
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(price)
+  }
 
   const applyFilters = () => {
-    setShowFilters(false);
+    setShowFilters(false)
     // Trigger refetch by updating the query key through sortBy
-    setFilters({ ...filters });
-  };
+    setFilters({ ...filters })
+  }
 
   const clearFilters = () => {
     setFilters({
-      sortBy: "newest",
-      minPrice: "",
-      maxPrice: "",
-    });
-  };
+      sortBy: 'newest',
+      minPrice: '',
+      maxPrice: '',
+    })
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -82,24 +89,21 @@ export default function SearchProducts() {
               {searchInput && (
                 <button
                   type="button"
-                  onClick={() => setSearchInput("")}
-                  className="ml-2 text-gray-400 hover:text-gray-600"
-                >
+                  onClick={() => setSearchInput('')}
+                  className="ml-2 text-gray-400 hover:text-gray-600">
                   <X className="h-5 w-5" />
                 </button>
               )}
             </div>
             <button
               type="submit"
-              className="rounded-xl bg-orange-500 px-6 py-3 font-semibold text-white transition hover:bg-orange-600"
-            >
+              className="rounded-xl bg-orange-500 px-6 py-3 font-semibold text-white transition hover:bg-orange-600">
               Tìm kiếm
             </button>
             <button
               type="button"
               onClick={() => setShowFilters(!showFilters)}
-              className="rounded-xl border-2 border-gray-200 bg-white p-3 text-gray-700 transition hover:bg-gray-50"
-            >
+              className="rounded-xl border-2 border-gray-200 bg-white p-3 text-gray-700 transition hover:bg-gray-50">
               <SlidersHorizontal className="h-5 w-5" />
             </button>
           </form>
@@ -111,8 +115,7 @@ export default function SearchProducts() {
                 <h3 className="font-semibold text-gray-800">Bộ lọc</h3>
                 <button
                   onClick={clearFilters}
-                  className="text-sm text-orange-500 hover:text-orange-600"
-                >
+                  className="text-sm text-orange-500 hover:text-orange-600">
                   Xóa bộ lọc
                 </button>
               </div>
@@ -124,12 +127,12 @@ export default function SearchProducts() {
                     Sắp xếp theo
                   </label>
                   <select
-                    value={filters.sortBy}
+                    value={filters.sortBy == 'ucb' ? '' : filters.sortBy}
                     onChange={(e) =>
                       setFilters({ ...filters, sortBy: e.target.value })
                     }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
-                  >
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200">
+                    <option value="" hidden></option>
                     <option value="newest">Mới nhất</option>
                     <option value="price_asc">Giá tăng dần</option>
                     <option value="price_desc">Giá giảm dần</option>
@@ -173,8 +176,7 @@ export default function SearchProducts() {
               <div className="mt-4 flex justify-end">
                 <button
                   onClick={applyFilters}
-                  className="rounded-lg bg-orange-500 px-6 py-2 font-semibold text-white transition hover:bg-orange-600"
-                >
+                  className="rounded-lg bg-orange-500 px-6 py-2 font-semibold text-white transition hover:bg-orange-600">
                   Áp dụng
                 </button>
               </div>
@@ -189,7 +191,9 @@ export default function SearchProducts() {
               Kết quả tìm kiếm cho "{queryParam}"
             </h2>
             <p className="mt-1 text-sm text-gray-600">
-              {isLoading ? "Đang tải..." : `Tìm thấy ${products.length} sản phẩm`}
+              {isLoading
+                ? 'Đang tải...'
+                : `Tìm thấy ${products.length} sản phẩm`}
             </p>
           </div>
         )}
@@ -211,15 +215,15 @@ export default function SearchProducts() {
               <div
                 key={product.id}
                 className="group cursor-pointer rounded-2xl border-2 border-gray-100 bg-white p-5 shadow-lg transition-all hover:-translate-y-2 hover:border-orange-300 hover:shadow-2xl"
-                onClick={() => navigate(`/customer/products/${product.id}`)}
-              >
+                onClick={() => navigate(`/customer/products/${product.id}`)}>
                 <div className="relative overflow-hidden rounded-xl">
                   <img
-                    src={product.thumbnail || "https://via.placeholder.com/300"}
+                    src={product.thumbnail || 'https://via.placeholder.com/300'}
                     alt={product.title}
                     className="h-56 w-full rounded-xl object-cover transition-transform group-hover:scale-110 lg:h-64"
                     onError={(e) => {
-                      e.target.src = "https://via.placeholder.com/300?text=No+Image";
+                      e.target.src =
+                        'https://via.placeholder.com/300?text=No+Image'
                     }}
                   />
                   {!product.inStock && (
@@ -263,9 +267,8 @@ export default function SearchProducts() {
               Hãy thử tìm kiếm với từ khóa khác hoặc kiểm tra lại chính tả
             </p>
             <button
-              onClick={() => navigate("/customer/home")}
-              className="mt-6 rounded-lg bg-orange-500 px-6 py-3 font-semibold text-white transition hover:bg-orange-600"
-            >
+              onClick={() => navigate('/customer/home')}
+              className="mt-6 rounded-lg bg-orange-500 px-6 py-3 font-semibold text-white transition hover:bg-orange-600">
               Về trang chủ
             </button>
           </div>
@@ -284,5 +287,5 @@ export default function SearchProducts() {
         )}
       </div>
     </div>
-  );
+  )
 }

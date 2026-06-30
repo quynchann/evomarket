@@ -5,7 +5,6 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       Payment.belongsTo(models.Order, { foreignKey: "order_id" });
       Payment.belongsTo(models.User, { foreignKey: "user_id" });
-      Payment.belongsTo(models.Coupon, { foreignKey: "coupons_id" });
       Payment.hasOne(models.Refund, { foreignKey: "payment_id" });
     }
   }
@@ -16,7 +15,6 @@ module.exports = (sequelize, DataTypes) => {
       amount: DataTypes.INTEGER,
       method: DataTypes.ENUM("COD", "Online"),
       status: DataTypes.ENUM("Success", "Failed", "Pending"),
-      coupons_id: DataTypes.INTEGER,
       vnpay_transaction_no: DataTypes.STRING(32),
       vnpay_transaction_date: DataTypes.STRING(20),
       refunded_at: DataTypes.DATE,

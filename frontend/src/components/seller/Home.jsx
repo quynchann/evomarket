@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { chatApi, chatQueryKeys } from "../../services/chatApi.js";
 import { orderApi } from "../../services/orderApi.js";
 import { useAuthStore } from "../../stores/useAuthStore.js";
+import { sampleProducts } from "../../constants/productImages.js";
 
 function formatBriefVnd(vnd) {
   const v = Number(vnd) || 0;
@@ -432,28 +433,28 @@ export default function Home() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 sm:gap-6">
           {[
             {
-              img: "https://tnj.vn/56584-large_default/khuyen-tai-bac-nu-hoa-5-canh-dinh-da-btn0220.jpg",
-              name: "Khuyên tai bạc sang trọng",
+              img: sampleProducts.earringStud.image,
+              name: sampleProducts.earringStud.name,
               sold: 128,
-              price: "300.000₫",
+              price: sampleProducts.earringStud.price,
             },
             {
-              img: "https://tnj.vn/21875-large_default/day-chuyen-co-4-la-xoay-dinh-da-trang-dcn0508.jpg",
-              name: "Dây chuyền cỏ 4 lá may mắn",
+              img: sampleProducts.hatBucket.image,
+              name: sampleProducts.hatBucket.name,
               sold: 95,
-              price: "520.000₫",
+              price: sampleProducts.hatBucket.price,
             },
             {
-              img: "https://matkinhlb.com.vn/wp-content/uploads/2022/09/kinh-mat-nu-8_09f5336328494b7cba57f975ef6df2b4_master-1.jpg",
-              name: "Kính mát thời trang",
+              img: sampleProducts.glassesSun.image,
+              name: sampleProducts.glassesSun.name,
               sold: 80,
-              price: "249.000₫",
+              price: sampleProducts.glassesSun.price,
             },
             {
-              img: "https://down-vn.img.susercontent.com/file/d5857cc3f56de509870a5e86e88f6d42.webp",
-              name: "Mũ lưỡi trai unisex",
+              img: sampleProducts.hatCap.image,
+              name: sampleProducts.hatCap.name,
               sold: 72,
-              price: "99.000₫",
+              price: sampleProducts.hatCap.price,
             },
           ].map((p, i) => (
             <div

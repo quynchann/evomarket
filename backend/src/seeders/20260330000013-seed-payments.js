@@ -1,4 +1,4 @@
-'use strict'
+﻿'use strict'
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
@@ -11,7 +11,6 @@ module.exports = {
         amount: 500000,
         method: 'Online',
         status: 'Success',
-        coupons_id: null,
         created_at: new Date('2026-03-15')
       },
       {
@@ -21,7 +20,6 @@ module.exports = {
         amount: 630000,
         method: 'COD',
         status: 'Pending',
-        coupons_id: 3,
         created_at: new Date('2026-03-20')
       },
       {
@@ -31,7 +29,6 @@ module.exports = {
         amount: 450000,
         method: 'Online',
         status: 'Success',
-        coupons_id: null,
         created_at: new Date('2026-03-25')
       },
       {
@@ -41,7 +38,6 @@ module.exports = {
         amount: 280000,
         method: 'Online',
         status: 'Failed',
-        coupons_id: 1,
         created_at: new Date('2026-03-28')
       }
     ]

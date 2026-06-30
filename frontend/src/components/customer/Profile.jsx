@@ -15,6 +15,26 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import { sampleProducts } from "../../constants/productImages.js";
+
+function ProductThumb({ image, className = "h-16 w-16" }) {
+  if (typeof image === "string" && image.startsWith("http")) {
+    return (
+      <img
+        src={image}
+        alt=""
+        className={`${className} rounded-lg object-cover bg-white shadow`}
+      />
+    );
+  }
+  return (
+    <div
+      className={`${className} flex items-center justify-center rounded-lg bg-white text-2xl shadow`}
+    >
+      {image}
+    </div>
+  );
+}
 
 function birthdayToInputValue(v) {
   if (v == null || v === "") return "";
@@ -97,7 +117,11 @@ export default function ProfilePage() {
     {
       id: "#EVO001234",
       items: [
-        { name: "Kính râm phân cực Polarized", image: "🕶️", quantity: 1 },
+        {
+          name: sampleProducts.glassesSun.name,
+          image: sampleProducts.glassesSun.image,
+          quantity: 1,
+        },
       ],
       total: "350.000₫",
       date: "15/12/2024",
@@ -107,7 +131,11 @@ export default function ProfilePage() {
     {
       id: "#EVO001235",
       items: [
-        { name: "Mũ lưỡi trai unisex cotton", image: "🧢", quantity: 2 },
+        {
+          name: sampleProducts.hatCap.name,
+          image: sampleProducts.hatCap.image,
+          quantity: 2,
+        },
       ],
       total: "300.000₫",
       date: "18/12/2024",
@@ -117,9 +145,13 @@ export default function ProfilePage() {
     {
       id: "#EVO001236",
       items: [
-        { name: "Vòng cổ dây chuyền mảnh", image: "📿", quantity: 1 },
+        {
+          name: sampleProducts.earringStud.name,
+          image: sampleProducts.earringStud.image,
+          quantity: 1,
+        },
       ],
-      total: "450.000₫",
+      total: "280.000₫",
       date: "20/12/2024",
       status: "Chờ xác nhận",
       statusColor: "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -127,10 +159,34 @@ export default function ProfilePage() {
   ];
 
   const wishlist = [
-    { id: 1, name: "Hoa tai khuyên bạc 925", price: "280.000₫", image: "✨", stock: true },
-    { id: 2, name: "Kính gọng chống ánh sáng xanh", price: "250.000₫", image: "👓", stock: true },
-    { id: 3, name: "Mũ bucket vải denim", price: "520.000₫", image: "🧢", stock: false },
-    { id: 4, name: "Vòng tay charm bạc", price: "180.000₫", image: "💎", stock: true },
+    {
+      id: 1,
+      name: sampleProducts.earringStud.name,
+      price: sampleProducts.earringStud.price,
+      image: sampleProducts.earringStud.image,
+      stock: true,
+    },
+    {
+      id: 2,
+      name: sampleProducts.glassesBlueLight.name,
+      price: sampleProducts.glassesBlueLight.price,
+      image: sampleProducts.glassesBlueLight.image,
+      stock: true,
+    },
+    {
+      id: 3,
+      name: sampleProducts.hatBucket.name,
+      price: sampleProducts.hatBucket.price,
+      image: sampleProducts.hatBucket.image,
+      stock: false,
+    },
+    {
+      id: 4,
+      name: sampleProducts.glassesVintage.name,
+      price: sampleProducts.glassesVintage.price,
+      image: sampleProducts.glassesVintage.image,
+      stock: true,
+    },
   ];
 
   const handleInputChange = (e) => {
@@ -535,9 +591,7 @@ export default function ProfilePage() {
 
                     {order.items.map((item, i) => (
                       <div key={i} className="flex items-center gap-4 rounded-lg bg-gray-50 p-3">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-white text-2xl shadow">
-                          {item.image}
-                        </div>
+                        <ProductThumb image={item.image} />
                         <div className="flex-1">
                           <h4 className="font-medium text-gray-800">{item.name}</h4>
                           <p className="text-sm text-gray-500">Số lượng: {item.quantity}</p>
@@ -630,9 +684,10 @@ export default function ProfilePage() {
                     className="rounded-xl border-2 border-gray-200 p-4 transition hover:border-orange-300 hover:shadow-lg"
                   >
                     <div className="relative mb-4">
-                      <div className="flex h-32 w-full items-center justify-center rounded-xl bg-gray-100 text-4xl">
-                        {item.image}
-                      </div>
+                      <ProductThumb
+                        image={item.image}
+                        className="h-32 w-full rounded-xl"
+                      />
                       <button className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-red-500 shadow transition hover:bg-red-50">
                         ❤️
                       </button>

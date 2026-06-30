@@ -371,7 +371,6 @@ export const createOrder = async (userId, orderData) => {
         variant_id: Number.isFinite(vid) ? vid : null,
         seller_id: product.seller_id,
         quantity,
-        price: sellingPrice,
         total_price: itemTotalPrice,
         selling_price: sellingPrice,
         import_price: importPrice,
@@ -488,7 +487,6 @@ export const createOrder = async (userId, orderData) => {
           amount: finalTotal,
           method: 'Online',
           status: 'Pending',
-          coupons_id: platformCoupon ? platformCoupon.id : null,
         },
         { transaction },
       )

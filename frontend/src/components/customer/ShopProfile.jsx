@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { shopApi } from "../../services/shopApi.js";
 import { useAuthStore } from "../../stores/useAuthStore.js";
 import Footer from "./Footer.jsx";
+import ProductPagination from "./ProductPagination.jsx";
 
 const PAGE_SIZE = 12;
 
@@ -300,31 +301,12 @@ export default function ShopProfile() {
                       ))}
                     </div>
 
-                    {totalPages > 1 ? (
-                      <div className="mt-10 flex justify-center gap-2">
-                        <button
-                          type="button"
-                          disabled={page <= 1}
-                          onClick={() => setPage((p) => Math.max(1, p - 1))}
-                          className="rounded-full border border-gray-200 px-4 py-2 text-sm disabled:opacity-40"
-                        >
-                          Trước
-                        </button>
-                        <span className="flex items-center px-3 text-sm text-gray-600">
-                          Trang {page} / {totalPages}
-                        </span>
-                        <button
-                          type="button"
-                          disabled={page >= totalPages}
-                          onClick={() =>
-                            setPage((p) => Math.min(totalPages, p + 1))
-                          }
-                          className="rounded-full border border-gray-200 px-4 py-2 text-sm disabled:opacity-40"
-                        >
-                          Sau
-                        </button>
-                      </div>
-                    ) : null}
+                    <ProductPagination
+                      className="mt-10"
+                      page={page}
+                      totalPages={totalPages}
+                      onPageChange={setPage}
+                    />
                   </>
                 )}
               </div>

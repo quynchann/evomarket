@@ -6,10 +6,8 @@ module.exports = (sequelize, DataTypes) => {
       Product.belongsTo(models.Category, { foreignKey: "category_id" });
       Product.belongsTo(models.User, { as: "Seller", foreignKey: "seller_id" });
       Product.hasMany(models.ProductVariant, { foreignKey: "product_id" });
-      Product.hasMany(models.TryonModel, { foreignKey: "product_id" });
       Product.hasMany(models.ProductTryonInstance, { foreignKey: "product_id" });
-      Product.hasOne(models.Inventory, { foreignKey: "product_id" });
-      Product.hasMany(models.Discount, { foreignKey: "product_id" });
+      Product.hasOne(models.ProductImpressionStat, { foreignKey: "product_id" });
       Product.hasMany(models.Review, { foreignKey: "product_id" });
       Product.hasMany(models.OrderItem, { foreignKey: "product_id" });
       Product.hasMany(models.Cart, { foreignKey: "product_id" });
@@ -25,8 +23,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         defaultValue: 0,
       },
-      profit_margin: DataTypes.INTEGER,
-      quantity: DataTypes.STRING,
       thumbnail: DataTypes.STRING(500),
       images: DataTypes.TEXT,
       description: DataTypes.TEXT,

@@ -3,149 +3,72 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Lấy seller_id từ bảng Products
+    const productIds = [1, 2, 3, 4, 6, 8]
+
     const [productRows] = await queryInterface.sequelize.query(`
-      SELECT id, seller_id, title, thumbnail, price, import_price 
-      FROM Products 
-      WHERE id IN (1, 2, 3, 4, 6, 8)
+      SELECT id, seller_id, title, thumbnail, import_price, price
+      FROM Products
+      WHERE id IN (${productIds.join(',')})
     `)
-    
+
     const productMap = {}
-    productRows.forEach(p => {
+    productRows.forEach((p) => {
       productMap[p.id] = p
     })
 
-    // Phí sàn mặc định: 5%
-    const platformFeePercent = 5.00
-    
-    /**
-     * SNAPSHOT DATA - Đóng băng thông tin tại thời điểm đặt hàng
-     * 
-     * Mỗi OrderItem lưu:
-     * - selling_price: Giá bán tại thời điểm đó
-     * - import_price: Giá vốn tại thời điểm đó
-     * - platform_fee: Phí sàn (số tiền) = selling_price * quantity * 5%
-     * - platform_fee_percent: Phí sàn (%)
-     * - product_title: Tên sản phẩm
-     * - product_thumbnail: Ảnh sản phẩm
-     * - seller_id: ID của seller
-     */
-    const orderItemsData = [
-      // Order 1
-      { 
-        id: 1, 
-        order_id: 1, 
-        product_id: 1, 
-        variant_id: 2, 
-        seller_id: productMap[1].seller_id,
-        price: 150000, 
-        quantity: 2, 
-        total_price: 300000,
-        selling_price: 150000,
-        import_price: 120000,
-        platform_fee: Math.round(300000 * platformFeePercent / 100),
-        platform_fee_percent: platformFeePercent,
-        product_title: productMap[1].title,
-        product_thumbnail: productMap[1].thumbnail,
-        variant_name: 'Màu trắng'
-      },
-      { 
-        id: 2, 
-        order_id: 1, 
-        product_id: 8, 
-        variant_id: 29, 
-        seller_id: productMap[8].seller_id,
-        price: 180000, 
-        quantity: 1, 
-        total_price: 180000,
-        selling_price: 180000,
-        import_price: 140000,
-        platform_fee: Math.round(180000 * platformFeePercent / 100),
-        platform_fee_percent: platformFeePercent,
-        product_title: productMap[8].title,
-        product_thumbnail: productMap[8].thumbnail,
-        variant_name: 'Màu đen'
-      },
-      
-      // Order 2
-      { 
-        id: 3, 
-        order_id: 2, 
-        product_id: 2, 
-        variant_id: 6, 
-        seller_id: productMap[2].seller_id,
-        price: 250000, 
-        quantity: 1, 
-        total_price: 250000,
-        selling_price: 250000,
-        import_price: 200000,
-        platform_fee: Math.round(250000 * platformFeePercent / 100),
-        platform_fee_percent: platformFeePercent,
-        product_title: productMap[2].title,
-        product_thumbnail: productMap[2].thumbnail,
-        variant_name: 'Gọng vàng'
-      },
-      { 
-        id: 4, 
-        order_id: 2, 
-        product_id: 6, 
-        variant_id: 23, 
-        seller_id: productMap[6].seller_id,
-        price: 380000, 
-        quantity: 1, 
-        total_price: 380000,
-        selling_price: 380000,
-        import_price: 300000,
-        platform_fee: Math.round(380000 * platformFeePercent / 100),
-        platform_fee_percent: platformFeePercent,
-        product_title: productMap[6].title,
-        product_thumbnail: productMap[6].thumbnail,
-        variant_name: 'Màu bạc'
-      },
-      
-      // Order 3
-      { 
-        id: 5, 
-        order_id: 3, 
-        product_id: 3, 
-        variant_id: 10, 
-        seller_id: productMap[3].seller_id,
-        price: 350000, 
-        quantity: 1, 
-        total_price: 350000,
-        selling_price: 350000,
-        import_price: 280000,
-        platform_fee: Math.round(350000 * platformFeePercent / 100),
-        platform_fee_percent: platformFeePercent,
-        product_title: productMap[3].title,
-        product_thumbnail: productMap[3].thumbnail,
-        variant_name: 'Tròng xanh'
-      },
-      
-      // Order 4
-      { 
-        id: 6, 
-        order_id: 4, 
-        product_id: 4, 
-        variant_id: 15, 
-        seller_id: productMap[4].seller_id,
-        price: 280000, 
-        quantity: 1, 
-        total_price: 280000,
-        selling_price: 280000,
-        import_price: 220000,
-        platform_fee: Math.round(280000 * platformFeePercent / 100),
-        platform_fee_percent: platformFeePercent,
-        product_title: productMap[4].title,
-        product_thumbnail: productMap[4].thumbnail,
-        variant_name: 'Màu vàng'
+    const [variantRows] = await queryInterface.sequelize.query(`
+      SELECT id, product_id, color
+      FROM ProductVariants
+      WHERE product_id IN (${productIds.join(',')})
+      ORDER BY product_id ASC, id ASC
+    `)
+
+    const variantByProduct = {}
+    variantRows.forEach((v) => {
+      if (!variantByProduct[v.product_id]) {
+        variantByProduct[v.product_id] = v
       }
+    })
+
+    const platformFeePercent = 5.0
+
+    const lines = [
+      { id: 1, order_id: 1, product_id: 1, quantity: 2, variant_name: 'Màu trắng' },
+      { id: 2, order_id: 1, product_id: 8, quantity: 1, variant_name: 'Màu đen' },
+      { id: 3, order_id: 2, product_id: 2, quantity: 1, variant_name: 'Gọng vàng' },
+      { id: 4, order_id: 2, product_id: 6, quantity: 1, variant_name: 'Màu bạc' },
+      { id: 5, order_id: 3, product_id: 3, quantity: 1, variant_name: 'Tròng xanh' },
+      { id: 6, order_id: 4, product_id: 4, quantity: 1, variant_name: 'Màu vàng' },
     ]
+
+    const orderItemsData = lines.map((line) => {
+      const product = productMap[line.product_id]
+      const variant = variantByProduct[line.product_id]
+      const sellingPrice = Number(product.price)
+      const totalPrice = sellingPrice * line.quantity
+
+      return {
+        id: line.id,
+        order_id: line.order_id,
+        product_id: line.product_id,
+        variant_id: variant.id,
+        seller_id: product.seller_id,
+        quantity: line.quantity,
+        total_price: totalPrice,
+        selling_price: sellingPrice,
+        import_price: Number(product.import_price),
+        platform_fee: Math.round((totalPrice * platformFeePercent) / 100),
+        platform_fee_percent: platformFeePercent,
+        product_title: product.title,
+        product_thumbnail: product.thumbnail,
+        variant_name: line.variant_name,
+      }
+    })
 
     await queryInterface.bulkInsert('OrderItems', orderItemsData, {})
   },
 
   async down(queryInterface, Sequelize) {
     await queryInterface.bulkDelete('OrderItems', null, {})
-  }
+  },
 }

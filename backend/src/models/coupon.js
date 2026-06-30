@@ -3,8 +3,6 @@ const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class Coupon extends Model {
     static associate(models) {
-      Coupon.hasMany(models.UserPayment, { foreignKey: "coupon_id" });
-      Coupon.hasMany(models.Payment, { foreignKey: "coupons_id" });
       Coupon.hasMany(models.CouponRedemption, { foreignKey: "coupon_id" });
       Coupon.hasMany(models.Order, { foreignKey: "coupon_id" });
     }

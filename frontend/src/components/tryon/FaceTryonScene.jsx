@@ -1,4 +1,11 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import {
+  forwardRef,
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { Loader2 } from 'lucide-react'
 import {
   HEAD_OCCLUDER_URL,
@@ -9,6 +16,7 @@ import {
   useMindarSceneHost,
   waitForArLibraries,
   stopMindarScene,
+  releaseActiveCameraStreams,
 } from '../seller/tryon/useMindarSceneHost'
 import '../seller/tryon/tryonScene.css'
 
@@ -35,22 +43,40 @@ const HeadOccluder = memo(function HeadOccluder() {
  *     rotation: { x: number, y: number, z: number },
  *     scale: { x: number, y: number, z: number },
  *   }>,
- *   fullscreen?: boolean,
+ *   webcam?: boolean,
  *   ratio16x9?: boolean,
  *   className?: string,
  *   modelLoadTimeoutMs?: number,
  *   loadErrorMessage?: string,
  * }} props
  */
-export default function FaceTryonScene({
-  items,
-  fullscreen = false,
-  ratio16x9 = false,
-  className = '',
-  modelLoadTimeoutMs = 90000,
-  loadErrorMessage = 'Không thể khởi động AR. Vui lòng thử lại.',
-}) {
+export default forwardRef(function FaceTryonScene(
+  {
+    items,
+    webcam = false,
+    ratio16x9 = false,
+    className = '',
+    modelLoadTimeoutMs = 90000,
+    loadErrorMessage = 'Không thể khởi động AR. Vui lòng thử lại.',
+  },
+  forwardedRef,
+) {
   const hostRef = useRef(null)
+  // Giữ node host qua unmount — callback ref bị gọi với null trước khi cleanup chạy.
+  const hostElementRef = useRef(null)
+  const mindarSystemRef = useRef(null)
+
+  const setHostRef = (node) => {
+    hostRef.current = node
+    if (node) {
+      hostElementRef.current = node
+    }
+    if (typeof forwardedRef === 'function') {
+      forwardedRef(node)
+    } else if (forwardedRef) {
+      forwardedRef.current = node
+    }
+  }
   const sceneReadyRef = useRef(false)
   const [libsReady, setLibsReady] = useState(false)
   const [sceneVisible, setSceneVisible] = useState(false)
@@ -72,11 +98,19 @@ export default function FaceTryonScene({
     })
     return () => {
       cancelled = true
-      stopMindarScene(hostRef.current)
     }
   }, [])
 
-  useMindarSceneHost(hostRef, [libsReady, sceneKey, ratio16x9, fullscreen])
+  useLayoutEffect(() => {
+    return () => {
+      stopMindarScene(hostElementRef.current, mindarSystemRef.current)
+      mindarSystemRef.current = null
+      hostElementRef.current = null
+      releaseActiveCameraStreams()
+    }
+  }, [])
+
+  useMindarSceneHost(hostRef, [libsReady, sceneKey, ratio16x9, webcam])
 
   useLayoutEffect(() => {
     if (!sceneVisible || !hostRef.current) return
@@ -107,6 +141,7 @@ export default function FaceTryonScene({
     if (!scene) return
 
     const onSceneLoaded = () => {
+      mindarSystemRef.current = scene.systems?.['mindar-face-system'] ?? null
       sceneReadyRef.current = true
       setSceneVisible(true)
       setLoadError(null)
@@ -166,7 +201,7 @@ export default function FaceTryonScene({
 
   const shellClass = [
     'tryon-scene-host',
-    fullscreen && 'tryon-scene-host--fullscreen',
+    webcam && 'tryon-scene-host--webcam',
     ratio16x9 && 'tryon-scene-host--ratio-16-9',
     className,
   ]
@@ -245,8 +280,8 @@ export default function FaceTryonScene({
   )
 
   return (
-    <div ref={hostRef} className={shellClass}>
+    <div ref={setHostRef} className={shellClass}>
       {sceneContent}
     </div>
   )
-}
+})

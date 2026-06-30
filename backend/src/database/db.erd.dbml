@@ -1,0 +1,216 @@
+// ERD lõi EvoMarket — Hình FigERD (Chương 4)
+// 23 bảng, chỉ hiển thị cột khóa và thuộc tính nghiệp vụ chính
+
+Table users {
+  id int [pk]
+  email varchar(150)
+  role enum('buyer', 'seller', 'admin')
+  shop_name varchar(120)
+}
+
+Table refresh_tokens {
+  id int [pk]
+  user_id int
+}
+
+Table user_addresses {
+  id int [pk]
+  user_id int
+  label varchar(100)
+  is_default boolean
+}
+
+Table user_notifications {
+  id int [pk]
+  user_id int
+  type varchar(64)
+  read_at datetime
+}
+
+Table categories {
+  id int [pk]
+  name varchar(100)
+}
+
+Table products {
+  id int [pk]
+  category_id int
+  seller_id int
+  title varchar(250)
+  total_stock int
+  sold int
+  available int
+  deleted boolean
+}
+
+Table product_variants {
+  id int [pk]
+  product_id int
+  size varchar(50)
+  color varchar(50)
+  stock int
+}
+
+Table product_tryon_instances {
+  id int [pk]
+  product_id int
+  anchor_index int
+  model_url varchar(500)
+}
+
+Table product_impression_stats {
+  product_id int [pk]
+  impressions int
+  clicks int
+}
+
+Table cart {
+  id int [pk]
+  user_id int
+  product_id int
+  variant_id int
+  quantity int
+}
+
+Table coupons {
+  id int [pk]
+  code varchar(50)
+  seller_id int
+  discount_type enum('Percentage', 'Fixed')
+}
+
+Table coupon_redemptions {
+  id int [pk]
+  coupon_id int
+  user_id int
+  order_id int
+}
+
+Table orders {
+  id int [pk]
+  user_id int
+  coupon_id int
+  total_price int
+  status varchar(40)
+  carrier_name varchar(120)
+  tracking_number varchar(120)
+  payment_method enum('COD', 'Online')
+}
+
+Table order_items {
+  id int [pk]
+  order_id int
+  product_id int
+  variant_id int
+  seller_id int
+  quantity int
+  selling_price int
+}
+
+Table order_status_histories {
+  id int [pk]
+  order_id int
+  to_status varchar(40)
+  actor_type enum('buyer', 'seller', 'system')
+}
+
+Table payments {
+  id int [pk]
+  order_id int
+  user_id int
+  amount int
+  method enum('COD', 'Online')
+  status enum('Success', 'Failed', 'Pending')
+}
+
+Table refunds {
+  id int [pk]
+  payment_id int
+  order_id int
+  user_id int
+  status enum('Pending', 'Approved', 'Rejected')
+}
+
+Table reviews {
+  id int [pk]
+  user_id int
+  product_id int
+  order_id int
+  order_item_id int
+  rating int
+}
+
+Table conversations {
+  id int [pk]
+  user1_id int
+  user2_id int
+}
+
+Table messages {
+  id int [pk]
+  conversation_id int
+  sender_id int
+  message_type enum('text', 'image', 'audio', 'file')
+}
+
+Table seller_shop_follows {
+  id int [pk]
+  seller_id int
+  follower_id int
+}
+
+Table seller_shop_visits {
+  id int [pk]
+  seller_id int
+  visit_date date
+  visitor_key varchar(64)
+}
+
+Table platform_config {
+  id int [pk]
+  config_key varchar(100)
+}
+
+Ref: users.id < refresh_tokens.user_id
+Ref: users.id < user_addresses.user_id
+Ref: users.id < user_notifications.user_id
+Ref: users.id < orders.user_id
+Ref: users.id < cart.user_id
+Ref: users.id < payments.user_id
+Ref: users.id < refunds.user_id
+Ref: users.id < reviews.user_id
+Ref: users.id < products.seller_id
+Ref: users.id < order_items.seller_id
+Ref: users.id < coupons.seller_id
+Ref: users.id < coupon_redemptions.user_id
+Ref: users.id < conversations.user1_id
+Ref: users.id < conversations.user2_id
+Ref: users.id < messages.sender_id
+Ref: users.id < seller_shop_follows.seller_id
+Ref: users.id < seller_shop_follows.follower_id
+Ref: users.id < seller_shop_visits.seller_id
+
+Ref: categories.id < products.category_id
+Ref: products.id < product_variants.product_id
+Ref: products.id < product_tryon_instances.product_id
+Ref: products.id - product_impression_stats.product_id
+Ref: products.id < reviews.product_id
+Ref: products.id < order_items.product_id
+Ref: products.id < cart.product_id
+
+Ref: product_variants.id < cart.variant_id
+Ref: product_variants.id < order_items.variant_id
+
+Ref: coupons.id < orders.coupon_id
+Ref: coupons.id < coupon_redemptions.coupon_id
+
+Ref: orders.id < order_items.order_id
+Ref: orders.id < payments.order_id
+Ref: orders.id < refunds.order_id
+Ref: orders.id < order_status_histories.order_id
+Ref: orders.id < coupon_redemptions.order_id
+Ref: orders.id < reviews.order_id
+
+Ref: payments.id < refunds.payment_id
+Ref: order_items.id < reviews.order_item_id
+Ref: conversations.id < messages.conversation_id

@@ -1,5 +1,51 @@
 import { useLayoutEffect } from 'react'
 
+function stopVideoElement(video) {
+  if (!video) return
+
+  const stream = video.srcObject
+  if (stream && typeof stream.getTracks === 'function') {
+    stream.getTracks().forEach((track) => {
+      try {
+        track.stop()
+      } catch {
+        /* ignore */
+      }
+    })
+  }
+
+  try {
+    video.pause()
+  } catch {
+    /* ignore */
+  }
+
+  video.srcObject = null
+  video.removeAttribute('src')
+  try {
+    video.load()
+  } catch {
+    /* ignore */
+  }
+}
+
+function isLiveCameraVideo(video) {
+  const stream = video?.srcObject
+  if (!(stream instanceof MediaStream)) return false
+  return stream.getTracks().some((track) => track.readyState === 'live')
+}
+
+/**
+ * Dừng mọi stream camera còn active trên trang (fallback khi MindAR không gắn video trong container).
+ */
+export function releaseActiveCameraStreams() {
+  document.querySelectorAll('video').forEach((video) => {
+    if (isLiveCameraVideo(video)) {
+      stopVideoElement(video)
+    }
+  })
+}
+
 /**
  * Chỉ đồng bộ kích thước scene với container — không đổi camera.aspect (MindAR tự quản lý).
  */
@@ -71,26 +117,70 @@ export function useMindarSceneHost(containerRef, deps = []) {
   }, deps)
 }
 
-export function stopMindarScene(container) {
-  if (!container) return
+function stopMindarSystem(mindarSystem) {
+  if (!mindarSystem) return
 
-  container.querySelectorAll('video').forEach((video) => {
-    const stream = video.srcObject
-    if (stream && typeof stream.getTracks === 'function') {
-      stream.getTracks().forEach((track) => track.stop())
+  try {
+    mindarSystem.pause?.()
+    mindarSystem.stop?.()
+  } catch {
+    /* ignore */
+  }
+}
+
+export function stopMindarScene(container, mindarSystemOverride = null) {
+  const scene = container?.querySelector?.('a-scene') ?? null
+  const mindarSystem =
+    mindarSystemOverride ?? scene?.systems?.['mindar-face-system'] ?? null
+
+  stopMindarSystem(mindarSystem)
+
+  if (!scene) {
+    document.querySelectorAll('a-scene[mindar-face]').forEach((orphanScene) => {
+      stopMindarSystem(orphanScene.systems?.['mindar-face-system'])
+    })
+  }
+
+  if (container) {
+    container.querySelectorAll('video').forEach(stopVideoElement)
+  }
+
+  if (scene) {
+    scene.querySelectorAll('video').forEach(stopVideoElement)
+  }
+
+  document.querySelectorAll('video').forEach((video) => {
+    if (!isLiveCameraVideo(video)) return
+
+    const inTryonTree =
+      (container && container.contains(video)) ||
+      (scene && scene.contains(video)) ||
+      video.closest('.tryon-scene-host') ||
+      video.closest('a-scene')
+
+    if (inTryonTree) {
+      stopVideoElement(video)
     }
-    video.srcObject = null
   })
 
-  const scene = container.querySelector('a-scene')
-  const mindarSystem = scene?.systems?.['mindar-face-system']
-  if (mindarSystem?.stop) {
+  if (scene?.renderer) {
     try {
-      mindarSystem.stop()
+      scene.renderer.setAnimationLoop?.(null)
+      scene.renderer.dispose?.()
     } catch {
       /* ignore */
     }
   }
+
+  if (scene && typeof scene.destroy === 'function') {
+    try {
+      scene.destroy()
+    } catch {
+      /* ignore */
+    }
+  }
+
+  releaseActiveCameraStreams()
 }
 
 export function waitForArLibraries() {
